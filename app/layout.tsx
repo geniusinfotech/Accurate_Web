@@ -1,5 +1,8 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
+import { AuthProvider } from "@/context/AuthContext";
+import { DialogProvider } from "@/components/admin/ConfirmDialog";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +23,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <body className="antialiased">
-        {children}
+        <AuthProvider>
+          <DialogProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </DialogProvider>
+        </AuthProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
