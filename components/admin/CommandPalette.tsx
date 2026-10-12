@@ -13,6 +13,7 @@ import {
   Tag,
   Truck,
   Eye,
+  MessageSquare,
   DollarSign,
   Activity,
   BarChart3,
@@ -114,6 +115,14 @@ export default function CommandPalette() {
         category: "Navigation",
         icon: Eye,
         href: "/admin/testimonials",
+      },
+      {
+        id: "nav-messages",
+        title: "Contact Messages & Inquiries",
+        category: "Navigation",
+        icon: MessageSquare,
+        href: "/admin/messages",
+        shortcut: "G M",
       },
       {
         id: "nav-accounts",

@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Package,
   PanelLeftClose,
   PanelLeftOpen,
@@ -111,6 +112,11 @@ const menuSections: MenuSection[] = [
         label: "Testimonials",
         href: "/admin/testimonials",
         permissions: ["testimonials:view"],
+      },
+      {
+        icon: MessageSquare,
+        label: "Contact Messages",
+        href: "/admin/messages",
       },
     ],
   },
@@ -231,7 +237,7 @@ export default function Sidebar() {
               ].join(" ")}
             >
               <Image
-                src="/logo.jpg"
+                src="/logo.png"
                 alt="Accurate Liquid"
                 fill
                 priority

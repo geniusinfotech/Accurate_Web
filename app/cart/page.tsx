@@ -8,7 +8,7 @@ import { formatINR } from "@/lib/checkout";
 
 function CartPageInner() {
   const router = useRouter();
-  const { cart, cartMeta, setCart, products } = useStore();
+  const { cart, cartMeta, setCart, products, clearCart } = useStore();
 
   const entries = Object.entries(cart).filter(([, qty]) => qty > 0);
   const linePrice = (id: string, qty: number) => {
@@ -38,8 +38,53 @@ function CartPageInner() {
 
   return (
     <main className="inner-page wrap">
-      <p className="eyebrow">your selection</p>
-      <h1>Cart {count > 0 && <span>({count})</span>}</h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+          gap: 16,
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <p className="eyebrow">your selection</p>
+          <h1 style={{ margin: 0 }}>Cart {count > 0 && <span>({count})</span>}</h1>
+        </div>
+        {entries.length > 0 && (
+          <button
+            type="button"
+            onClick={clearCart}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#b3261e",
+              background: "#fff",
+              border: "1px solid #fecaca",
+              borderRadius: 9999,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#fef2f2";
+              e.currentTarget.style.borderColor = "#f87171";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#fff";
+              e.currentTarget.style.borderColor = "#fecaca";
+            }}
+            title="Clear all items from your cart"
+          >
+            <Trash2 size={14} />
+            <span>Clear cart</span>
+          </button>
+        )}
+      </div>
 
       {entries.length === 0 ? (
         <div className="empty-cart" style={{ padding: "3rem 0", textAlign: "center" }}>
@@ -155,6 +200,25 @@ function CartPageInner() {
             <button className="checkout" style={{ width: "100%" }} onClick={() => router.push("/checkout")}>
               Proceed to checkout <ArrowRight size={18} />
             </button>
+            <div
+              style={{
+                marginTop: 14,
+                padding: "10px 12px",
+                background: "#f8fafc",
+                borderRadius: 10,
+                border: "1px solid #e2e8f0",
+                fontSize: 11,
+                color: "#475569",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+              }}
+            >
+              <div style={{ fontWeight: 600, color: "#1f4e9e", display: "flex", alignItems: "center", gap: 5 }}>
+                <span>🔒</span> 100% Secure Checkout with Razorpay
+              </div>
+              <div>Supports UPI, Cards (Visa/Mastercard/RuPay), &amp; Netbanking</div>
+            </div>
             <Link
               href="/shop"
               style={{ display: "block", textAlign: "center", marginTop: 12, fontSize: 14 }}

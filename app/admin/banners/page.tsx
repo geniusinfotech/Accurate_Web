@@ -78,15 +78,15 @@ export default function Banners() {
   }
 
 
-  const valid = formData.title.trim().length > 0 && (editingId || desktopFile)
+  const valid = Boolean(editingId || desktopFile)
 
   async function handleSubmit() {
-    if (!formData.title.trim()) { await alert('Give the banner a title.', 'warning'); return }
     if (!editingId && !desktopFile) { await alert('A desktop image or video is required.', 'warning'); return }
     setSubmitting(true)
     try {
+      const resolvedTitle = formData.title.trim() || desktopFile?.name?.replace(/\.[^/.]+$/, "") || `Banner ${formData.displayOrder + 1}` || 'Banner'
       const fd = new FormData()
-      fd.append('title', formData.title)
+      fd.append('title', resolvedTitle)
       fd.append('description', formData.description)
       fd.append('link', formData.link)
       fd.append('ctaText', formData.ctaText)
@@ -225,22 +225,10 @@ export default function Banners() {
       >
         <div className="space-y-4">
           <div>
-            <label className={stackedLabelCls}>Name <span className="text-rose-gold">*</span> <span className="font-normal normal-case text-charcoal/50">— for your reference and screen readers, not shown on the site</span></label>
-            <input
-              type="text"
-              tabIndex={1}
-              value={formData.title}
-              onChange={e => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g. Monsoon offer"
-              className={modalInputCls}
-            />
-          </div>
-
-          <div>
             <label className={stackedLabelCls}>Link (optional — where a click on the banner goes)</label>
             <input
               type="text"
-              tabIndex={2}
+              tabIndex={1}
               value={formData.link}
               onChange={e => setFormData({ ...formData, link: e.target.value })}
               placeholder="/shop"

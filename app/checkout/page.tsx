@@ -18,7 +18,7 @@ import {
   type ProfileUser,
   type RazorpayOrderResponse,
 } from "@/lib/checkout";
-import { openRazorpayCheckout } from "@/lib/razorpay";
+import { openRazorpayCheckout, loadRazorpayScript } from "@/lib/razorpay";
 
 type Step = 1 | 2 | 3;
 
@@ -69,6 +69,11 @@ function CheckoutInner() {
     [items],
   );
 
+  // Preload Razorpay checkout script as early as possible.
+  useEffect(() => {
+    loadRazorpayScript().catch(() => {});
+  }, []);
+
   // Pre-fill from profile for logged-in shoppers.
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -104,7 +109,8 @@ function CheckoutInner() {
   function validateInfo(): boolean {
     const errs: Record<string, string> = {};
     if (customerName.trim().length < 2) errs.customerName = "Enter your full name.";
-    if (!isValidPhone(phone)) errs.phone = "Enter a valid 10–15 digit phone number.";
+    if (!isValidPhone(phone))
+      errs.phone = "Phone number must start with 6, 7, 8, or 9 and be exactly 10 digits.";
     if (address.trim().length < 8) errs.address = "Enter your full street address.";
     if (!isValidPincode(pincode))
       errs.pincode = "Pincode must be exactly 6 digits (required for payment).";
@@ -450,14 +456,27 @@ function CheckoutInner() {
                   </label>
                   <input
                     id="co-phone"
+                    type="tel"
+                    inputMode="numeric"
                     style={inputStyle}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
+                    maxLength={10}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setPhone(digits);
+                      if (fieldErrors.phone) {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.phone;
+                          return next;
+                        });
+                      }
+                    }}
+                    placeholder="10-digit number (e.g. 9876543210)"
                     autoComplete="tel"
                   />
                   {fieldErrors.phone && (
-                    <p style={{ color: "#b3261e", fontSize: 12 }}>{fieldErrors.phone}</p>
+                    <p style={{ color: "#b3261e", fontSize: 12, marginTop: 4 }}>{fieldErrors.phone}</p>
                   )}
                 </div>
                 <div>
@@ -524,13 +543,14 @@ function CheckoutInner() {
                 <label
                   style={{
                     display: "flex",
-                    gap: 10,
+                    gap: 12,
                     alignItems: "flex-start",
-                    border: "1px solid var(--color-border-gray, #e5e0d8)",
-                    borderRadius: 12,
-                    padding: 14,
+                    border: paymentMethod === "razorpay" ? "2px solid #1f4e9e" : "1px solid var(--color-border-gray, #e5e0d8)",
+                    borderRadius: 14,
+                    padding: 16,
                     cursor: "pointer",
                     background: paymentMethod === "razorpay" ? "#f0f6ff" : "#fff",
+                    boxShadow: paymentMethod === "razorpay" ? "0 4px 14px rgba(31, 78, 158, 0.08)" : "none",
                   }}
                 >
                   <input
@@ -538,15 +558,39 @@ function CheckoutInner() {
                     name="pm"
                     checked={paymentMethod === "razorpay"}
                     onChange={() => setPaymentMethod("razorpay")}
+                    style={{ marginTop: 3 }}
                   />
-                  <span>
-                    <strong style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <Lock size={14} /> Pay online — UPI / Card / Netbanking
-                    </strong>
-                    <small style={{ color: "var(--color-muted)" }}>
-                      Secured by Razorpay. Amount is quoted live by the server.
-                    </small>
-                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                      <strong style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, color: "#0c2340" }}>
+                        <Lock size={15} color="#1f4e9e" /> Pay online via Razorpay
+                      </strong>
+                      <span style={{ fontSize: 11, fontWeight: 700, background: "#e0f2fe", color: "#0369a1", padding: "2px 8px", borderRadius: 999 }}>
+                        RECOMMENDED
+                      </span>
+                    </div>
+                    <p style={{ color: "var(--color-muted)", fontSize: 13, margin: "4px 0 10px" }}>
+                      Instant confirmation • 256-bit SSL encrypted • UPI, Cards, Netbanking &amp; Wallets
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                      {["Google Pay", "PhonePe", "Paytm", "BHIM UPI", "Visa", "MasterCard", "RuPay", "Netbanking"].map((tag) => (
+                        <span
+                          key={tag}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: "#fff",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 6,
+                            padding: "2px 7px",
+                            color: "#334155",
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </label>
 
                 <label
@@ -710,13 +754,13 @@ function CheckoutInner() {
                   </button>
                 ) : (
                   <button className="checkout" style={{ flex: 2 }} onClick={payWithRazorpay} disabled={placing}>
-                    <Lock size={16} /> {placing ? "Processing…" : `Pay ${quote ? formatINR(quote.quote.totalAmount) : ""}`}
+                    <Lock size={16} /> {placing ? "Opening Razorpay…" : `Pay ${quote ? formatINR(quote.quote.totalAmount) : ""} via Razorpay`}
                   </button>
                 )}
               </div>
               <p style={{ fontSize: 12, color: "var(--color-muted)", marginTop: 10 }}>
                 {paymentMethod === "razorpay"
-                  ? "You’ll complete payment in the Razorpay window. Your order is created only after successful payment."
+                  ? "You’ll complete payment securely in the Razorpay window. Your order is placed immediately after successful payment."
                   : "Pay when your order arrives."}
               </p>
             </div>
@@ -786,6 +830,24 @@ function CheckoutInner() {
           >
             {quoteBusy ? "Refreshing…" : "Refresh live total"}
           </button>
+
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 14,
+              borderTop: "1px solid #f1f5f9",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              fontSize: 12,
+              color: "var(--color-muted)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#1f4e9e", fontWeight: 600 }}>
+              <Lock size={13} /> Secured by Razorpay
+            </div>
+            <div>All major UPI apps, cards, &amp; 50+ netbanking partners supported.</div>
+          </div>
         </aside>
       </div>
     </main>
@@ -794,7 +856,7 @@ function CheckoutInner() {
 
 export default function CheckoutPage() {
   return (
-    <PageFrame>
+    <PageFrame hideFooter>
       <CheckoutInner />
     </PageFrame>
   );

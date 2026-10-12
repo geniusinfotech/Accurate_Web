@@ -134,7 +134,8 @@ export function cartToOrderItems(
 }
 
 export function isValidPhone(phone: string): boolean {
-  return /^\+?[0-9\s\-()]{10,20}$/.test(phone.trim());
+  const digits = phone.replace(/\D/g, "");
+  return digits.length === 10 && /^[6-9]\d{9}$/.test(digits);
 }
 
 /** Razorpay + payment quote require a strict 6-digit pincode. */

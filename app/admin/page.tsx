@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock3,
   ExternalLink,
+  MessageSquare,
   Package,
   RefreshCw,
   Search,
@@ -75,6 +76,13 @@ const QUICK_ACTIONS = [
     description: "Analytics, financial reports and exports",
     icon: BarChart3,
     iconClass: "bg-rose-500/10 text-rose-600",
+  },
+  {
+    href: "/admin/messages",
+    label: "Contact Messages",
+    description: "Customer inquiries, phone numbers & messages",
+    icon: MessageSquare,
+    iconClass: "bg-teal-500/10 text-teal-600",
   },
 ];
 
@@ -189,15 +197,21 @@ export default function DashboardPage() {
 
   const [summary, setSummary] = useState<DashboardStats | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [unreadInquiries, setUnreadInquiries] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [summaryResponse, ordersResponse] = await Promise.all([
+      const [summaryResponse, ordersResponse, contactStats] = await Promise.all([
         apiRequest("/orders/summary").catch(() => null),
         apiRequest("/orders").catch(() => []),
+        apiRequest<{ unread?: number }>("/contact/stats").catch(() => null),
       ]);
+
+      if (contactStats && typeof contactStats.unread === "number") {
+        setUnreadInquiries(contactStats.unread);
+      }
 
       const orders = Array.isArray(ordersResponse)
         ? ordersResponse
@@ -429,6 +443,37 @@ export default function DashboardPage() {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800"
             >
               Open Orders
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Unread Contact Inquiries Attention */}
+      {unreadInquiries > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-teal-200 bg-teal-50/70">
+          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex gap-4">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-teal-100 text-teal-700">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  {unreadInquiries} new contact inquiry
+                  {unreadInquiries === 1 ? "" : "ies"} awaiting response
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Customer messages received with verified phone numbers from the contact page.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/messages"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#244892] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#1a356b]"
+            >
+              Review Messages
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

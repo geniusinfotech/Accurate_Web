@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   ShieldCheck,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { api } from "../lib/api";
@@ -179,7 +180,7 @@ export function CartDrawer({
   setOpen: (value: boolean) => void;
 }) {
   const router = useRouter();
-  const { cart, cartMeta, setCart, products: dynamicProducts } = useContext(StoreContext);
+  const { cart, cartMeta, setCart, clearCart, products: dynamicProducts } = useContext(StoreContext);
   if (!open) return null;
   const totalItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
 
@@ -192,10 +193,14 @@ export function CartDrawer({
   const subtotal = Object.entries(cart).reduce((sum, [id, qty]) => sum + linePrice(id, qty), 0);
 
   const change = (id: string | number, delta: number) =>
-    setCart((current) => ({
-      ...current,
-      [id]: Math.max(0, (current[id] || 0) + delta),
-    }));
+    setCart((current) => {
+      const next = (current[id] || 0) + delta;
+      if (next <= 0) {
+        const { [id]: _omit, ...rest } = current;
+        return rest;
+      }
+      return { ...current, [id]: next };
+    });
 
   return (
     <div className="overlay" onClick={() => setOpen(false)}>
@@ -206,9 +211,22 @@ export function CartDrawer({
         <div className="drawer-head">
           <div>
             <p className="eyebrow">your selection</p>
-            <h2>
-              Cart <span>({totalItems})</span>
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2>
+                Cart <span>({totalItems})</span>
+              </h2>
+              {totalItems > 0 && (
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 hover:underline transition-colors ml-1 cursor-pointer"
+                  title="Clear all items from cart"
+                >
+                  <Trash2 size={12} />
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
           <button onClick={() => setOpen(false)} aria-label="Close cart">
             <X />
@@ -327,10 +345,19 @@ function mapApiProduct(p: ApiProduct, index: number): Product {
       : packagingType.includes("spray") || packagingType.includes("trigger")
         ? "spray"
         : kinds[index % kinds.length];
+  const rawCategory: any = p.category;
+  const categoryName =
+    (typeof rawCategory === "object" && rawCategory?.name ? rawCategory.name : undefined) ||
+    (typeof rawCategory === "string" && !/^[0-9a-fA-F]{24}$/.test(rawCategory) ? rawCategory : undefined) ||
+    (typeof raw.productType === "string"
+      ? raw.productType.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+      : undefined) ||
+    "Everyday Care";
+
   return {
     id: p._id || p.id,
     name: p.name,
-    category: p.category?.name || p.categoryId || "Category",
+    category: categoryName,
     price: firstVariant?.price ?? p.price,
     size,
     color: colors[index % colors.length],
@@ -339,7 +366,7 @@ function mapApiProduct(p: ApiProduct, index: number): Product {
   };
 }
 
-export function CartSite({ children }: { children: React.ReactNode }) {
+export function CartSite({ children, hideFooter = false }: { children: React.ReactNode; hideFooter?: boolean }) {
   const [cart, setCart] = useState<Record<string | number, number>>({});
   const [cartMeta, setCartMeta] = useState<Record<string, CartMeta>>({});
   const [open, setOpen] = useState(false);
@@ -414,9 +441,11 @@ export function CartSite({ children }: { children: React.ReactNode }) {
 
   return (
     <StoreContext.Provider value={{ products, cart, cartMeta, addToCart, setCart, setCartMeta, clearCart, loading, error }}>
-      <Navbar onCart={() => setOpen(true)} count={count} />
-      {children}
-      <Footer />
+      <div className="site-shell min-h-screen flex flex-col justify-between">
+        <Navbar onCart={() => setOpen(true)} count={count} />
+        <div className="flex-1">{children}</div>
+        {!hideFooter && <Footer />}
+      </div>
       <CartDrawer open={open} setOpen={setOpen} />
     </StoreContext.Provider>
   );
@@ -596,6 +625,6 @@ export function CertificateModal({
   );
 }
 
-export function PageFrame({ children }: { children: React.ReactNode }) {
-  return <CartSite>{children}</CartSite>;
+export function PageFrame({ children, hideFooter }: { children: React.ReactNode; hideFooter?: boolean }) {
+  return <CartSite hideFooter={hideFooter}>{children}</CartSite>;
 }

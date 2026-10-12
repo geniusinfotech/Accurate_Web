@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Check, Minus, PackageCheck, Plus, ShieldCheck, Truck, Droplets, Zap } from 'lucide-react';
+import { ArrowRight, Check, Lock, Minus, PackageCheck, Plus, ShieldCheck, Truck, Droplets, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast';
 import { useStore } from '@/components/storefront';
@@ -214,7 +214,11 @@ export function ProductInfo({ product, variant, onVariant, fragrance, onFragranc
           </div>
         ))}
       </div>
-      <p className="mt-3 text-xs text-muted">Free delivery on orders above ₹499. <Check size={12} className="inline text-emerald-600" /> COD available.</p>
+      <p className="mt-3 text-xs text-muted flex items-center flex-wrap gap-x-2 gap-y-1">
+        <span>Free delivery on orders above ₹499.</span>
+        <span><Check size={12} className="inline text-emerald-600" /> COD available.</span>
+        <span><Lock size={12} className="inline text-primary" /> Secure online checkout via Razorpay (UPI, Cards).</span>
+      </p>
 
       {/* Meta */}
       <dl className="mt-5 space-y-1.5 text-[13px] text-muted border-t border-border-gray pt-4">

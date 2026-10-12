@@ -25,9 +25,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <DialogProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <ToastProvider>{children}</ToastProvider>
           </DialogProvider>
         </AuthProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}

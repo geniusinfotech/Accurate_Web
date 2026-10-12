@@ -10,6 +10,7 @@ export function flyToCart(fromEl: HTMLElement | null) {
 
   const from = fromEl.getBoundingClientRect();
   const to = cartEl.getBoundingClientRect();
+  if (to.width === 0 || to.height === 0 || from.width === 0 || from.height === 0) return;
 
   const dot = document.createElement("div");
   dot.setAttribute("data-fly-dot", "true");

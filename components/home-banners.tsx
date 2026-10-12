@@ -17,11 +17,29 @@ function isVideo(path?: string, type?: string) {
 
 function mediaUrl(path?: string) {
   if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
   return getUploadUrl(path, "banners");
 }
 
+const FALLBACK_BANNERS: Banner[] = [
+  {
+    _id: "default-hero",
+    id: "default-hero",
+    title: "Everyday Cleaning, Elevated.",
+    description: "Thoughtfully formulated washing liquids & home essentials for modern families. Proudly crafted in Surat.",
+    link: "/shop",
+    ctaText: "Shop Collection",
+    displayOrder: 1,
+    desktopMedia: "https://images.unsplash.com/photo-1582735689149-c12e524bd645?auto=format&fit=crop&q=80&w=1920",
+    desktopMediaType: "image",
+    isActive: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+];
+
 export function HomeBanners() {
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [banners, setBanners] = useState<Banner[]>(FALLBACK_BANNERS);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -45,10 +63,14 @@ export function HomeBanners() {
           )
           .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
-        setBanners(live);
+        if (live.length > 0) {
+          setBanners(live);
+        } else {
+          setBanners(FALLBACK_BANNERS);
+        }
       })
       .catch(() => {
-        if (mounted) setBanners([]);
+        if (mounted) setBanners(FALLBACK_BANNERS);
       });
 
     return () => {

@@ -152,7 +152,7 @@ function DialogModal({
           {isConfirm && (
             <button
               onClick={() => onClose(false)}
-              className="flex-1 py-2.5 px-6 rounded-lg text-sm font-semibold border border-border-gray text-charcoal hover:bg-light-gray transition-colors"
+              className="flex-1 py-2.5 px-6 rounded-lg text-sm font-semibold border border-border-gray text-white hover:bg-light-gray transition-colors"
             >
               {dialog.cancelLabel ?? 'Cancel'}
             </button>

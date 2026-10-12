@@ -8,7 +8,8 @@ import { ProductGrid } from './ProductGrid';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
 import type { Product as ApiProduct } from '@/lib/types/api';
-import { imagesFor, mapApiProduct, type StoreProduct, type StoreVariant } from '@/lib/product';
+import { fallbackProducts } from '@/components/storefront';
+import { fallbackToStoreProduct, imagesFor, mapApiProduct, type StoreProduct, type StoreVariant } from '@/lib/product';
 import { ProductGallery } from './ProductGallery';
 import { ProductInfo } from './ProductInfo';
 import { ProductTabs } from './ProductTabs';
@@ -60,6 +61,22 @@ export function ProductDetail({ id: propId }: { id?: string }) {
     if (!id) return;
     let mounted = true;
     setLoading(true);
+
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
+    if (!isMongoId) {
+      const fallback = fallbackProducts.find((p) => String(p.id) === String(id));
+      if (fallback) {
+        const mapped = fallbackToStoreProduct(fallback);
+        setProduct(mapped);
+        setVariant(mapped.variants[0] || null);
+        setFragrance(mapped.availableFragrances[0] || null);
+        setImageIndex(0);
+        setQuantity(1);
+        setLoading(false);
+        return;
+      }
+    }
+
     api
       .get<ApiProduct>(`/products/${id}`)
       .then((data) => {
@@ -80,7 +97,15 @@ export function ProductDetail({ id: propId }: { id?: string }) {
       })
       .catch(() => {
         if (!mounted) return;
-        toast.error('Could not load this product');
+        const fallback = fallbackProducts.find((p) => String(p.id) === String(id));
+        if (fallback) {
+          const mapped = fallbackToStoreProduct(fallback);
+          setProduct(mapped);
+          setVariant(mapped.variants[0] || null);
+          setFragrance(mapped.availableFragrances[0] || null);
+        } else {
+          toast.error('Could not load this product');
+        }
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -90,6 +115,7 @@ export function ProductDetail({ id: propId }: { id?: string }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
 
   useEffect(() => {
     setImageIndex(0);
