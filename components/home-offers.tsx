@@ -22,25 +22,8 @@ function isLive(o: DealOffer, now: Date): boolean {
   return true;
 }
 
-const DEFAULT_OFFERS: DealOffer[] = [
-  {
-    _id: "default-offer-1",
-    id: "default-offer-1",
-    title: "Special Inaugural Offer",
-    description:
-      "Enjoy 15% flat discount on your daily cleaning essentials with quick dispatch across India.",
-    couponCode: "CLEAN15",
-    discountPercentage: 15,
-    validFrom: "2026-01-01T00:00:00.000Z",
-    validUntil: "2027-01-01T00:00:00.000Z",
-    isActive: true,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  },
-];
-
 export function HomeOffers() {
-  const [offers, setOffers] = useState<DealOffer[]>(DEFAULT_OFFERS);
+  const [offers, setOffers] = useState<DealOffer[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,10 +37,10 @@ export function HomeOffers() {
         const list = Array.isArray(res) ? res : res?.items || [];
         const live = list.filter((offer) => isLive(offer, new Date()));
 
-        setOffers(live.length > 0 ? live : DEFAULT_OFFERS);
+        setOffers(live);
       })
       .catch(() => {
-        if (mounted) setOffers(DEFAULT_OFFERS);
+        if (mounted) setOffers([]);
       });
 
     return () => {

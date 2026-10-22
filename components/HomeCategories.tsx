@@ -6,51 +6,6 @@ import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { api, getImageUrl } from "@/lib/api";
 import type { Category } from "@/lib/types/api";
 
-const FALLBACK_CATEGORIES = [
-  {
-    _id: "1",
-    name: "Laundry Care",
-    slug: "laundry-care",
-    image:
-      "https://images.unsplash.com/photo-1582735689149-c12e524bd645?auto=format&fit=crop&q=80&w=1000",
-  },
-  {
-    _id: "2",
-    name: "Dish Care",
-    slug: "dish-care",
-    image:
-      "https://images.unsplash.com/photo-1585002242080-60fbebb84eb6?auto=format&fit=crop&q=80&w=1000",
-  },
-  {
-    _id: "3",
-    name: "Surface Care",
-    slug: "surface-care",
-    image:
-      "https://images.unsplash.com/photo-1584820927498-cafe4c10776b?auto=format&fit=crop&q=80&w=1000",
-  },
-  {
-    _id: "4",
-    name: "Specialized Cleaning",
-    slug: "specialized-cleaning",
-    image:
-      "https://images.unsplash.com/photo-1596755490731-0df04f4a3e9c?auto=format&fit=crop&q=80&w=1000",
-  },
-  {
-    _id: "5",
-    name: "Personal Care",
-    slug: "personal-care",
-    image:
-      "https://images.unsplash.com/photo-1584556812952-905ffd0c611a?auto=format&fit=crop&q=80&w=1000",
-  },
-  {
-    _id: "6",
-    name: "Toilet Cleaner",
-    slug: "toilet-cleaner-liquid",
-    image:
-      "https://images.unsplash.com/photo-1584820927506-697960fc5d4c?auto=format&fit=crop&q=80&w=1000",
-  },
-];
-
 interface DisplayCategory {
   _id: string;
   name: string;
@@ -87,27 +42,19 @@ export function HomeCategories() {
 
         const active = list.filter((category) => category.isActive !== false);
 
-        if (active.length) {
-          setCategories(
-            active.map((category, index) => ({
+        setCategories(
+            active.map((category) => ({
               _id: category._id || category.id,
               name: category.name,
               slug:
                 category.slug ||
                 category.name.toLowerCase().replace(/\s+/g, "-"),
-              image:
-                resolveImage(category.homepageCoverImage || category.image) ||
-                FALLBACK_CATEGORIES[index % FALLBACK_CATEGORIES.length].image,
+              image: resolveImage(category.homepageCoverImage || category.image),
             })),
           );
-        } else {
-          setCategories(FALLBACK_CATEGORIES);
-        }
       })
       .catch(() => {
-        if (mounted) {
-          setCategories(FALLBACK_CATEGORIES);
-        }
+        if (mounted) setCategories([]);
       });
 
     return () => {
@@ -300,13 +247,13 @@ export function HomeCategories() {
                 }`}
               >
                 {/* Image */}
-                <img
+                {category.image && <img
                   src={category.image}
                   alt={category.name}
                   loading="lazy"
                   draggable={false}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-                />
+                />}
 
                 {/* Image overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />

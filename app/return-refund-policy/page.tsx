@@ -14,6 +14,13 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Return & Refund Policy",
+  description: "Accurate Liquid return, replacement and refund policy for online orders.",
+  path: "/return-refund-policy",
+});
 
 const sections = [
   {

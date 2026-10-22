@@ -39,45 +39,6 @@ export type Product = {
   kind: "bottle" | "pouch" | "pump" | "spray";
   image?: string;
 };
-export const fallbackProducts: Product[] = [
-  {
-    id: 1,
-    name: "Accurate Liquid",
-    category: "Laundry care",
-    price: 249,
-    size: "1 L",
-    color: "aqua",
-    kind: "bottle",
-  },
-  {
-    id: 2,
-    name: "Umiyadham Floor Care",
-    category: "Home care",
-    price: 199,
-    size: "1 L",
-    color: "gold",
-    kind: "bottle",
-  },
-  {
-    id: 3,
-    name: "Pure Hands Wash",
-    category: "Personal care",
-    price: 149,
-    size: "500 ml",
-    color: "coral",
-    kind: "pump",
-  },
-  {
-    id: 4,
-    name: "Accurate Refill Pack",
-    category: "Refill pouch",
-    price: 399,
-    size: "2 L",
-    color: "sage",
-    kind: "pouch",
-  },
-];
-
 export type CartMeta = {
   name: string;
   price: number;
@@ -99,7 +60,7 @@ const StoreContext = createContext<{
   loading: boolean;
   error: string | null;
 }>({
-  products: fallbackProducts,
+  products: [],
   cart: {},
   cartMeta: {},
   addToCart: () => {},
@@ -440,7 +401,7 @@ export function CartSite({ children, hideFooter = false }: { children: React.Rea
   const [cart, setCart] = useState<Record<string | number, number>>({});
   const [cartMeta, setCartMeta] = useState<Record<string, CartMeta>>({});
   const [open, setOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);

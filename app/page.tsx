@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PageFrame } from "@/components/storefront";
-import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductGrid, WhenProducts } from "@/components/product/ProductGrid";
 import { HomeOffers } from "@/components/home-offers";
 import { HomeBanners } from "@/components/home-banners";
 import { HomeCategories } from "@/components/HomeCategories";
@@ -33,6 +33,7 @@ export default function Home() {
           <PromiseGrid />
         </FadeIn>
 
+        <WhenProducts>
         <section className="limewash-section relative overflow-hidden py-20 sm:py-24 lg:py-28 border-t border-slate-200">
           <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
             {/* SECTION HEADER */}
@@ -95,6 +96,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+        </WhenProducts>
 
         {/* About the brand — dark section */}
         <FadeIn>

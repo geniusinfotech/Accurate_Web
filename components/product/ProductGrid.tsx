@@ -6,6 +6,13 @@ import { Product, ProductArt, useStore } from "../storefront";
 import { useToast } from "../ui/Toast";
 import { AddToCartButton } from "./AddToCartButton";
 
+/** Renders children only while products are loading or available; hides the section when the API fails or returns nothing. */
+export function WhenProducts({ excludeId, children }: { excludeId?: string; children: React.ReactNode }) {
+  const { products, loading } = useStore();
+  if (!loading && !products.some((p) => String(p.id) !== excludeId)) return null;
+  return <>{children}</>;
+}
+
 export function ProductGrid({
   products: propsProducts,
   excludeId,

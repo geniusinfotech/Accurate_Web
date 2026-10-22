@@ -1,4 +1,11 @@
 import { PageFrame } from "@/components/storefront";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: "How Accurate Liquid collects, uses and protects your personal information.",
+  path: "/privacy-policy",
+});
 
 const sections = [
   {

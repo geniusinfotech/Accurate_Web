@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Leaf, Sparkles } from 'lucide-react';
 import { PageFrame } from '@/components/storefront';
-import { ProductGrid } from './ProductGrid';
+import { ProductGrid, WhenProducts } from './ProductGrid';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
 import type { Product as ApiProduct } from '@/lib/types/api';
-import { fallbackProducts } from '@/components/storefront';
-import { fallbackToStoreProduct, imagesFor, mapApiProduct, type StoreProduct, type StoreVariant } from '@/lib/product';
+import { imagesFor, mapApiProduct, type StoreProduct, type StoreVariant } from '@/lib/product';
 import { ProductGallery } from './ProductGallery';
 import { ProductInfo } from './ProductInfo';
 import { ProductTabs } from './ProductTabs';
@@ -62,21 +61,6 @@ export function ProductDetail({ id: propId }: { id?: string }) {
     let mounted = true;
     setLoading(true);
 
-    const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
-    if (!isMongoId) {
-      const fallback = fallbackProducts.find((p) => String(p.id) === String(id));
-      if (fallback) {
-        const mapped = fallbackToStoreProduct(fallback);
-        setProduct(mapped);
-        setVariant(mapped.variants[0] || null);
-        setFragrance(mapped.availableFragrances[0] || null);
-        setImageIndex(0);
-        setQuantity(1);
-        setLoading(false);
-        return;
-      }
-    }
-
     api
       .get<ApiProduct>(`/products/${id}`)
       .then((data) => {
@@ -97,15 +81,7 @@ export function ProductDetail({ id: propId }: { id?: string }) {
       })
       .catch(() => {
         if (!mounted) return;
-        const fallback = fallbackProducts.find((p) => String(p.id) === String(id));
-        if (fallback) {
-          const mapped = fallbackToStoreProduct(fallback);
-          setProduct(mapped);
-          setVariant(mapped.variants[0] || null);
-          setFragrance(mapped.availableFragrances[0] || null);
-        } else {
-          toast.error('Could not load this product');
-        }
+        toast.error('Could not load this product');
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -243,6 +219,7 @@ export function ProductDetail({ id: propId }: { id?: string }) {
         )}
 
         {/* Related */}
+        <WhenProducts excludeId={String(product.id)}>
         <section className="product-wrap !px-0 mt-14 md:mt-20" id="related">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -257,6 +234,7 @@ export function ProductDetail({ id: propId }: { id?: string }) {
             <ProductGrid excludeId={String(product.id)} />
           </div>
         </section>
+        </WhenProducts>
 
         {/* Mobile sticky buy bar */}
         <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border-gray bg-white/95 backdrop-blur px-4 py-3 flex items-center gap-3 lg:hidden">

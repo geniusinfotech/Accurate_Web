@@ -1,6 +1,13 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { PageFrame } from '@/components/storefront'
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Shipping & Returns",
+  description: "Shipping and returns information for Accurate Liquid orders across India.",
+  path: "/shipping-returns",
+});
 
 export default function ShippingReturns() {
   return (
