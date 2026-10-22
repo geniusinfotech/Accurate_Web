@@ -162,9 +162,23 @@ export async function apiUpload<T = any>(
   return unwrap(await res.json());
 }
 
+/** Downloads a file from an authenticated endpoint (e.g. the product import template). */
+export async function apiDownload(endpoint: string, filename: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await authedFetch(resolveEndpoint(endpoint), { credentials: 'include' });
+  } catch {
+    throw new ApiError(`Cannot reach the server at ${SERVER_URL}.`, 0, null);
+  }
+  if (!res.ok) throw new ApiError(`Download failed with status ${res.status}`, res.status, null);
+  const url = URL.createObjectURL(await res.blob());
+  Object.assign(document.createElement('a'), { href: url, download: filename }).click();
+  URL.revokeObjectURL(url);
+}
+
 export function getImageUrl(path: string): string {
   if (!path) return '';
-  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/images/')) return path;
   if (path.startsWith('/')) return `${SERVER_URL}${path}`;
   // Bare filenames (e.g. "compressed-123.png" stored by deals-offers,
   // testimonials) live under the static /uploads/ dir.
@@ -173,7 +187,8 @@ export function getImageUrl(path: string): string {
 
 export function getUploadUrl(path: string, folder?: string): string {
   if (!path) return '';
-  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/')) return getImageUrl(path);
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/images/')) return getImageUrl(path);
+  if (path.startsWith('/')) return getImageUrl(path);
   // Bare filename + known subfolder (e.g. banners live in /uploads/banners/).
   if (folder) return `${SERVER_URL}/uploads/${folder}/${path}`;
   return getImageUrl(path);

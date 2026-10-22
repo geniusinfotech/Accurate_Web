@@ -32,8 +32,10 @@ function OrdersInner() {
     if (isAuthenticated) {
       setBusy(true);
       try {
-        const o = await apiRequest<ShopOrder[]>("/orders/my-orders");
-        setOrders(Array.isArray(o) ? o : []);
+        const url = p ? `/orders/my-orders?phone=${encodeURIComponent(p)}` : "/orders/my-orders";
+        const o: any = await apiRequest<any>(url);
+        const list = Array.isArray(o) ? o : Array.isArray(o?.items) ? o.items : [];
+        setOrders(list);
         setSearched(true);
       } catch (e: any) {
         toast.error(e?.message || "Could not load orders.");
@@ -48,8 +50,9 @@ function OrdersInner() {
     }
     setBusy(true);
     try {
-      const o = await apiRequest<ShopOrder[]>(`/orders/my-orders?phone=${encodeURIComponent(p)}`);
-      setOrders(Array.isArray(o) ? o : []);
+      const o: any = await apiRequest<any>(`/orders/my-orders?phone=${encodeURIComponent(p)}`);
+      const list = Array.isArray(o) ? o : Array.isArray(o?.items) ? o.items : [];
+      setOrders(list);
       setSearched(true);
       try {
         window.sessionStorage.setItem("accurate_last_order_phone", p);
@@ -140,8 +143,27 @@ function OrdersInner() {
       <div style={{ display: "grid", gap: 10, marginTop: 16, maxWidth: 760 }}>
         {orders.map((o) => (
           <div key={o._id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16, background: "#fff", fontSize: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-              <strong>{o.orderNumber}</strong>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <strong>{o.orderNumber}</strong>
+                <Link
+                  href={`/track?orderNumber=${encodeURIComponent(o.orderNumber)}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--color-primary, #244892)",
+                    textDecoration: "none",
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    background: "rgba(36, 72, 146, 0.08)",
+                  }}
+                >
+                  Track order →
+                </Link>
+              </div>
               <span style={{ fontSize: 12, color: "var(--color-muted)" }}>
                 {o.createdAt ? new Date(o.createdAt).toLocaleString("en-IN") : ""}
               </span>
@@ -151,6 +173,11 @@ function OrdersInner() {
             </p>
             <p style={{ margin: "6px 0" }}>
               <strong>{formatINR(o.totalAmount || 0)}</strong>{" "}
+              {Boolean((o.discount || 0) > 0) && (
+                <span style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>
+                  (saved {formatINR(o.discount || 0)}{o.couponCode ? ` with ${o.couponCode}` : ""}){" "}
+                </span>
+              )}
               <span style={{ fontSize: 12, color: "var(--color-muted)" }}>
                 • payment: {o.paymentStatus} • status: {o.orderStatus}
                 {o.trackingId ? ` • tracking: ${o.trackingId}${o.courierName ? ` (${o.courierName})` : ""}` : ""}

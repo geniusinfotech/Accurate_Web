@@ -39,10 +39,10 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
   }, [lightboxOpen, images.length, prev, next, onLightbox]);
 
   return (
-    <div className="product-gallery lg:sticky lg:top-24 self-start">
-      <div className="gallery-main group relative overflow-hidden rounded-3xl bg-cream/40 border border-border-gray/70">
+    <div className="product-gallery w-full">
+      <div className="gallery-main group relative overflow-hidden rounded-3xl border border-border-gray/70 bg-cream/40 shadow-xs">
         {images.length > 0 ? (
-          <div className="relative w-full min-h-[380px] md:min-h-[460px] flex items-center justify-center p-6 select-none">
+          <div className="relative w-full min-h-[380px] md:min-h-[460px] flex items-center justify-center p-6 select-none overflow-hidden">
             <img
               src={getImageUrl(images[safeIndex])}
               alt={`${product.name} - Image ${safeIndex + 1}`}
@@ -56,7 +56,7 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
                   type="button"
                   onClick={(e) => { e.stopPropagation(); prev(); }}
                   aria-label="Previous image"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-charcoal shadow-md border border-border-gray/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 hover:bg-white text-charcoal shadow-md border border-border-gray/50 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity z-10"
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -64,7 +64,7 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
                   type="button"
                   onClick={(e) => { e.stopPropagation(); next(); }}
                   aria-label="Next image"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-charcoal shadow-md border border-border-gray/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 hover:bg-white text-charcoal shadow-md border border-border-gray/50 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity z-10"
                 >
                   <ChevronRight size={20} />
                 </button>
@@ -79,8 +79,9 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
             >
               <ZoomIn size={16} />
             </button>
+
             {images.length > 1 && (
-              <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full text-xs font-semibold bg-charcoal/70 text-white flex items-center gap-1.5">
+              <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full text-xs font-semibold bg-charcoal/70 text-white flex items-center gap-1.5 z-10">
                 <ImageIcon size={12} />
                 <span>{safeIndex + 1} / {images.length}</span>
               </div>
@@ -101,11 +102,11 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
         )}
 
         {discount > 0 && (
-          <span className="discount-badge absolute top-4 left-4 px-3 py-1.5 rounded-full bg-charcoal text-white text-xs font-bold tracking-wide">
+          <span className="discount-badge absolute top-4 left-4 px-3 py-1.5 rounded-full bg-charcoal text-white text-xs font-bold tracking-wide z-10">
             {discount}% OFF
           </span>
         )}
-        <span className="essential-badge absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-white/90 border border-border-gray/60 text-xs font-semibold flex items-center gap-1.5 text-charcoal">
+        <span className="essential-badge absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-white/95 border border-border-gray/70 text-xs font-semibold flex items-center gap-1.5 text-charcoal shadow-xs z-10">
           <Sparkles size={14} className="text-primary" />
           {product.productForm || 'Everyday essential'}
         </span>

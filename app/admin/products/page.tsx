@@ -5,6 +5,7 @@ import { apiRequest, apiUpload } from "@/lib/api-client";
 import Modal from "@/components/admin/Modal";
 import { useDialog } from "@/components/admin/ConfirmDialog";
 import { PageHeader } from "@/components/admin/AdminShell";
+import { ProductImport } from "@/components/admin/ProductImport";
 import { getImageUrl } from "@/lib/api";
 import {
   Plus,
@@ -1045,13 +1046,16 @@ export default function Products() {
         title="Products"
         description="Manage liquid cleaning products, formulations, fragrances, stock and pricing"
         actions={
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 btn-primary px-5 py-2.5 shadow-sm"
-          >
-            <Plus size={18} />
-            Add Product
-          </button>
+          <>
+            <ProductImport categories={categories} onDone={fetchProducts} />
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 btn-primary px-5 py-2.5 shadow-sm"
+            >
+              <Plus size={18} />
+              Add Product
+            </button>
+          </>
         }
       />
 

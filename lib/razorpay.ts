@@ -23,7 +23,10 @@ interface RazorpayOptions {
 
 declare global {
   interface Window {
-    Razorpay?: new (options: RazorpayOptions) => { open: () => void };
+    Razorpay?: new (options: RazorpayOptions) => {
+      open: () => void;
+      on?: (event: string, callback: (data: any) => void) => void;
+    };
   }
 }
 
@@ -69,6 +72,7 @@ export interface OpenRazorpayArgs {
  * verified end-to-end even without live merchant credentials.
  */
 export async function openRazorpayCheckout(args: OpenRazorpayArgs): Promise<void> {
+  // If simulated test order, use built-in sandbox modal
   if (args.orderId.startsWith("order_test_")) {
     return openRazorpaySandboxModal(args);
   }
@@ -91,10 +95,21 @@ export async function openRazorpayCheckout(args: OpenRazorpayArgs): Promise<void
         ...(args.email ? { email: args.email } : {}),
         ...(args.phone ? { contact: args.phone } : {}),
       },
-      theme: { color: "#1f4e9e" },
+      theme: { color: "#244892" },
+      modal: {
+        ondismiss: () => {
+          if (args.onDismiss) args.onDismiss();
+        },
+      },
       handler: args.onSuccess,
-      modal: { ondismiss: args.onDismiss },
     });
+
+    if (typeof rzp.on === "function") {
+      rzp.on("payment.failed", (response: any) => {
+        console.warn("Razorpay payment failed:", response?.error);
+      });
+    }
+
     rzp.open();
   } catch (err) {
     // If external Razorpay script fails or rejects keys in development,

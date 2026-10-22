@@ -1,17 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { apiRequest } from '@/lib/api-client'
+import { apiRequest, apiUpload } from '@/lib/api-client'
+import { getUploadUrl } from '@/lib/api'
 import Modal from '@/components/admin/Modal'
 import { useDialog } from '@/components/admin/ConfirmDialog'
 import { PageHeader } from '@/components/admin/AdminShell'
 import { modalInputCls, stackedLabelCls } from '@/lib/admin-ui'
-import { Plus } from 'lucide-react'
+import { Plus, Image as ImageIcon } from 'lucide-react'
 import { activityLoggers } from '@/lib/activity-log'
 import { useToast } from '@/components/ui/Toast'
 import { DataTable } from '@/components/admin/DataTable'
 import { ShortcutHint, LIST_SHORTCUTS } from '@/components/admin/ShortcutHint'
 import { useFormTabNavigation } from '@/components/admin/useFormTabNavigation'
+import MediaUpload from '@/components/admin/MediaUpload'
 import type { Category } from '@/lib/types/api'
 
 const emptyForm = {
@@ -31,6 +33,9 @@ export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState(emptyForm)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [removeImage, setRemoveImage] = useState(false)
 
   useFormTabNavigation()
 
@@ -41,13 +46,19 @@ export default function Categories() {
       const data = await apiRequest('/categories')
       const list = Array.isArray(data) ? data : data?.items || []
       setCategories(list)
-    } catch { setCategories([])
-    } finally { setLoading(false) }
+    } catch {
+      setCategories([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   function resetForm() {
     setFormData(emptyForm)
     setEditingId(null)
+    setImageFile(null)
+    setImagePreview(null)
+    setRemoveImage(false)
   }
 
   function openCreate() {
@@ -64,6 +75,10 @@ export default function Categories() {
       isActive: item.isActive !== false,
       showOnHomepage: item.showOnHomepage || false,
     })
+    const photo = item.image || item.homepageCoverImage
+    setImagePreview(photo ? getUploadUrl(photo, 'images/categories') : null)
+    setImageFile(null)
+    setRemoveImage(false)
     setIsModalOpen(true)
   }
 
@@ -74,22 +89,38 @@ export default function Categories() {
     }
     setSubmitting(true)
     try {
+      const fd = new FormData()
+      fd.append('name', formData.name.trim())
+      fd.append('slug', formData.slug.trim())
+      fd.append('description', formData.description || '')
+      fd.append('isActive', formData.isActive ? 'true' : 'false')
+      fd.append('showOnHomepage', formData.showOnHomepage ? 'true' : 'false')
+
+      if (imageFile) {
+        fd.append('image', imageFile)
+      } else if (removeImage) {
+        fd.append('removeImage', 'true')
+      }
+
       if (editingId) {
         const oldCategory = categories.find(c => c._id === editingId)
-        await apiRequest(`/categories/${editingId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(formData),
-        })
+        await apiUpload(`/categories/${editingId}`, fd, 'PATCH')
         if (oldCategory) {
-          await activityLoggers.category.updated(editingId, oldCategory, { ...oldCategory, ...formData }, `Updated category: ${formData.name}`)
+          await activityLoggers.category.updated(
+            editingId,
+            oldCategory,
+            { ...oldCategory, ...formData },
+            `Updated category: ${formData.name}`
+          )
         }
         toast.success("Category updated successfully")
       } else {
-        const res = await apiRequest('/categories', {
-          method: 'POST',
-          body: JSON.stringify(formData),
-        })
-        await activityLoggers.category.created(res._id || res.id, res, `Created category: ${formData.name}`)
+        const res = await apiUpload('/categories', fd, 'POST')
+        await activityLoggers.category.created(
+          res._id || res.id,
+          res,
+          `Created category: ${formData.name}`
+        )
         toast.success("Category created successfully")
       }
       setIsModalOpen(false)
@@ -99,7 +130,9 @@ export default function Categories() {
     } catch (err: any) {
       await alert(err.message || 'Failed to save category', 'error')
       toast.error(err.message || 'Failed to save category')
-    } finally { setSubmitting(false) }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleDelete(id: string) {
@@ -146,6 +179,34 @@ export default function Categories() {
         headerRight={`${categories.length} categor${categories.length === 1 ? 'y' : 'ies'}`}
         loading={loading}
         columns={[
+          {
+            key: 'image',
+            label: 'Photo',
+            align: 'center',
+            render: (_: any, r: any) => {
+              const photo = r.image || r.homepageCoverImage
+              return photo ? (
+                <div className="w-12 h-12 rounded-lg overflow-hidden border border-border-gray shadow-xs mx-auto bg-stone-50 flex items-center justify-center">
+                  <img
+                    src={getUploadUrl(photo, 'images/categories')}
+                    alt={r.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="w-12 h-12 rounded-lg border border-dashed border-border-gray/80 bg-charcoal/[0.02] flex flex-col items-center justify-center text-charcoal/35 text-[10px] mx-auto font-medium"
+                  title="No photo uploaded"
+                >
+                  <ImageIcon size={14} className="opacity-40 mb-0.5" />
+                  <span>None</span>
+                </div>
+              )
+            },
+          },
           { key: 'name', label: 'Category Name' },
           { key: 'slug', label: 'Slug' },
           { key: 'description', label: 'Description', render: (v: string) => v || '—', hideOnMobile: true },
@@ -180,6 +241,24 @@ export default function Categories() {
         maxWidth="max-w-lg"
       >
         <div className="space-y-4">
+          <MediaUpload
+            label="Category Photo"
+            preview={imagePreview}
+            fileName={imageFile?.name}
+            maxMB={10}
+            hint="JPG, PNG, WebP or SVG up to 10 MB. Displayed on storefront and showcase."
+            onFileChange={(file, dataUrl) => {
+              setImageFile(file)
+              setImagePreview(dataUrl)
+              setRemoveImage(false)
+            }}
+            onClear={() => {
+              setImageFile(null)
+              setImagePreview(null)
+              setRemoveImage(true)
+            }}
+          />
+
           <div>
             <label className={stackedLabelCls}>Category Name <span className="text-rose-gold">*</span></label>
             <input

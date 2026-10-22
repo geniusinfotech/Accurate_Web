@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
+  CheckCircle2,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -24,10 +25,10 @@ type NavbarProps = {
 const menuItemCls =
   "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#0e1117] transition-colors hover:bg-[#f1efe9] hover:text-[#0e1117]";
 
-/** Account pill: "Sign in" when logged out; blue + green dot + name when logged in, with a hover/focus menu. */
+/** Account pill: "Sign in" when logged out; Name + circular progress ring & percentage when logged in, with interactive profile progress card. */
 function AccountMenu() {
   const router = useRouter();
-  const { user, isAuthenticated, isManager, isLoading, logout } = useAuth();
+  const { user, profileCompletion, isAuthenticated, isManager, isLoading, logout } = useAuth();
 
   if (!isAuthenticated || !user) {
     return (
@@ -49,45 +50,115 @@ function AccountMenu() {
         ? "Manager"
         : "Customer";
 
+  const pct = profileCompletion.percentage;
+  const isComplete = profileCompletion.isComplete || pct >= 100;
+  // Circumference for r=7.5 is 2 * Math.PI * 7.5 ~= 47.12
+  const strokeDashoffset = 47.12 - (47.12 * pct) / 100;
+
   return (
     <div className="group relative ml-1">
       <Link
         href="/profile"
         aria-haspopup="menu"
-        className="inline-flex max-w-[180px] items-center gap-2 rounded-full border border-[#244892]/30 bg-[#244892]/10 px-4 py-2.5 text-[13px] font-semibold text-[#244892] transition-all duration-200 group-hover:bg-[#244892] group-hover:text-white group-focus-within:bg-[#244892] group-focus-within:text-white"
+        aria-label={isComplete ? `Account of ${user.name}` : `Account of ${user.name}, profile ${pct}% complete`}
+        className="inline-flex max-w-[210px] items-center gap-2 rounded-full border border-[#244892]/30 bg-[#244892]/10 px-3.5 py-2 text-[13px] font-semibold text-[#244892] shadow-2xs transition-all duration-200 group-hover:bg-[#244892] group-hover:text-white group-focus-within:bg-[#244892] group-focus-within:text-white"
       >
-        {/* <span className="relative flex size-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-        </span> */}
+        <UserRound size={15} strokeWidth={2} className="shrink-0" />
         <span className="truncate">{firstName}</span>
+
+        {/* Circular Progress Ring + Percentage (Only shown when profile is incomplete < 100%) */}
+        {!isComplete && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[11px] font-bold text-[#244892] shadow-2xs transition-colors group-hover:bg-white group-hover:text-[#244892]">
+            <svg className="size-3.5 -rotate-90 shrink-0" viewBox="0 0 20 20" aria-hidden="true">
+              <circle
+                cx="10"
+                cy="10"
+                r="7.5"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                fill="none"
+                opacity="0.25"
+              />
+              <circle
+                cx="10"
+                cy="10"
+                r="7.5"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                fill="none"
+                strokeDasharray={47.12}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                className="transition-all duration-500 ease-out"
+              />
+            </svg>
+            <span className="tabular-nums font-extrabold tracking-tight">
+              {pct}%
+            </span>
+          </span>
+        )}
       </Link>
 
-      <div className="invisible absolute right-0 top-full z-10 w-64 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+      <div className="invisible absolute right-0 top-full z-10 w-72 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
         <div
           role="menu"
-          className="rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-[#0e1117]/8"
+          className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xl shadow-[#0e1117]/8"
         >
-          <div className="px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#244892]">
-              Signed in as
-            </p>
+          <div className="px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#244892]">
+                Signed in
+              </p>
+              <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                {roleLabel}
+              </span>
+            </div>
             <p className="mt-1 truncate text-sm font-bold text-[#0e1117]">
               {user.name}
             </p>
             {user.email && (
               <p className="truncate text-xs text-[#244892]">{user.email}</p>
             )}
-            <span className="mt-2 inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-              {roleLabel}
-            </span>
           </div>
+
+          {/* Profile Completion Interactive Card (Only shown when profile is incomplete < 100%) */}
+          {!isComplete && (
+            <div className="my-2 rounded-xl border border-slate-100 bg-slate-50/90 p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700">Profile Details</span>
+                <span className="font-black tracking-tight text-[#244892]">
+                  {pct}% Complete
+                </span>
+              </div>
+
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-[#244892] transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+
+              {profileCompletion.nextIncompleteItem && (
+                <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-200/60 pt-2 text-[11px]">
+                  <span className="truncate text-slate-500">
+                    Next: <strong className="text-slate-700">{profileCompletion.nextIncompleteItem.label}</strong>
+                  </span>
+                  <Link
+                    href={profileCompletion.nextIncompleteItem.href}
+                    className="shrink-0 font-bold text-[#244892] hover:underline"
+                  >
+                    Complete +25% →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
 
           {isManager && (
             <Link
               href="/admin"
               role="menuitem"
-              className="mb-1 flex items-center gap-2.5 rounded-xl bg-[#0e1117] px-3 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#244892]"
+              className="mb-1 flex items-center gap-2.5 rounded-xl bg-[#0e1117] px-3 py-2 text-[13px] font-bold text-white transition-colors hover:bg-[#244892]"
             >
               <LayoutDashboard size={15} /> Admin dashboard
             </Link>
@@ -105,7 +176,7 @@ function AccountMenu() {
               await logout();
               router.push("/");
             }}
-            className={`${menuItemCls} w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700`}
+            className={`${menuItemCls} w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer`}
           >
             <LogOut size={15} /> Sign out
           </button>
@@ -119,7 +190,7 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bump, setBump] = useState(false);
 
-  const { user, isAuthenticated, isManager, logout } = useAuth();
+  const { user, profileCompletion, isAuthenticated, isManager, logout } = useAuth();
   const router = useRouter();
   const accountHref = isAuthenticated ? "/profile" : "/login";
 
@@ -439,38 +510,72 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
           <div className="shrink-0 border-t border-slate-200 bg-white/60 px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-5 sm:px-8">
             <div className="mx-auto w-full max-w-2xl">
               {isAuthenticated && user && (
-                <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[#244892]/20 bg-[#244892]/10 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#244892]">
-                      <span className="size-2 rounded-full bg-emerald-500" />{" "}
-                      Signed in
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-bold text-[#0e1117]">
-                      {user.name}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {isManager && (
-                      <Link
-                        href="/admin"
-                        onClick={closeMenu}
-                        className="rounded-full bg-[#0e1117] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#244892]"
+                <div className="mb-3 rounded-2xl border border-[#244892]/20 bg-[#244892]/10 p-3.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#244892]">
+                        <span className="size-2 rounded-full bg-emerald-500" />{" "}
+                        Signed in
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-bold text-[#0e1117]">
+                        {user.name}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {isManager && (
+                        <Link
+                          href="/admin"
+                          onClick={closeMenu}
+                          className="rounded-full bg-[#0e1117] px-3.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#244892]"
+                        >
+                          Admin
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          closeMenu();
+                          await logout();
+                          router.push("/");
+                        }}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-50 cursor-pointer"
                       >
-                        Admin dashboard
-                      </Link>
-                    )}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        closeMenu();
-                        await logout();
-                        router.push("/");
-                      }}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-50"
-                    >
-                      Sign out
-                    </button>
+                        Sign out
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Profile Completion Bar for Mobile (Only shown when profile is incomplete < 100%) */}
+                  {!profileCompletion.isComplete && profileCompletion.percentage < 100 && (
+                    <div className="mt-3 rounded-xl border border-white/70 bg-white/80 p-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700">Profile Details</span>
+                        <span className="font-bold text-[#244892]">
+                          {profileCompletion.percentage}% Complete
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-[#244892] transition-all duration-500"
+                          style={{ width: `${profileCompletion.percentage}%` }}
+                        />
+                      </div>
+                      {profileCompletion.nextIncompleteItem && (
+                        <div className="mt-2 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500 truncate mr-2">
+                            Next: <strong className="text-slate-700">{profileCompletion.nextIncompleteItem.label}</strong>
+                          </span>
+                          <Link
+                            href={profileCompletion.nextIncompleteItem.href}
+                            onClick={closeMenu}
+                            className="shrink-0 font-bold text-[#244892] hover:underline"
+                          >
+                            Complete +25% →
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -482,7 +587,11 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-[#0e1117] transition-all duration-200 hover:border-[#244892] hover:bg-[#244892] hover:text-white active:scale-[0.98]"
                 >
                   <UserRound size={16} />
-                  {isAuthenticated ? "My profile" : "Sign in"}
+                  {isAuthenticated
+                    ? profileCompletion.isComplete || profileCompletion.percentage >= 100
+                      ? "Profile"
+                      : `Profile (${profileCompletion.percentage}%)`
+                    : "Sign in"}
                 </Link>
 
                 {/* Cart */}

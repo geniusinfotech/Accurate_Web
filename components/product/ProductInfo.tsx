@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ArrowRight, Check, Lock, Minus, PackageCheck, Plus, ShieldCheck, Truck, Droplets, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast';
 import { useStore } from '@/components/storefront';
 import { AddToCartButton } from './AddToCartButton';
+import { api } from '@/lib/api';
+import { COD_ENABLED } from '@/lib/checkout';
 import { formatINR, stockLabel, unitPriceLabel, type StoreProduct, type StoreVariant } from '@/lib/product';
 
 interface Props {
@@ -21,6 +24,14 @@ export function ProductInfo({ product, variant, onVariant, fragrance, onFragranc
   const { addToCart } = useStore();
   const toast = useToast();
   const router = useRouter();
+  // Owner-configured threshold (admin → Shipping); 0 / unset = no free-shipping promise.
+  const [freeShippingAbove, setFreeShippingAbove] = useState(0);
+  useEffect(() => {
+    api
+      .get<{ value?: { freeShippingAbove?: number } | null }>('/settings/shipping')
+      .then((r) => setFreeShippingAbove(Number(r?.value?.freeShippingAbove) || 0))
+      .catch(() => undefined);
+  }, []);
 
   const price = variant?.price ?? product.price;
   const mrp = variant?.mrp ?? product.mrp;
@@ -215,22 +226,46 @@ export function ProductInfo({ product, variant, onVariant, fragrance, onFragranc
         ))}
       </div>
       <p className="mt-3 text-xs text-muted flex items-center flex-wrap gap-x-2 gap-y-1">
-        <span>Free delivery on orders above ₹499.</span>
-        <span><Check size={12} className="inline text-emerald-600" /> COD available.</span>
+        <span>{freeShippingAbove > 0 ? `Free delivery on orders of ${formatINR(freeShippingAbove)} or more.` : 'Delivery charges are shown at checkout.'}</span>
+        {COD_ENABLED && <span><Check size={12} className="inline text-emerald-600" /> COD available.</span>}
         <span><Lock size={12} className="inline text-primary" /> Secure online checkout via Razorpay (UPI, Cards).</span>
       </p>
 
-      {/* Meta */}
-      <dl className="mt-5 space-y-1.5 text-[13px] text-muted border-t border-border-gray pt-4">
+      {/* Meta (Tags & Specifications) */}
+      <dl className="mt-5 space-y-2 text-[13px] text-muted border-t border-border-gray pt-4" id="product-side-details-meta">
         {product.certifications.length > 0 && (
-          <div className="flex gap-2"><dt className="w-28 shrink-0 font-semibold text-charcoal/60">Certified</dt><dd>{product.certifications.join(' • ')}</dd></div>
+          <div className="flex gap-2">
+            <dt className="w-28 shrink-0 font-semibold text-charcoal/60">Certified</dt>
+            <dd className="text-charcoal/85">{product.certifications.join(' • ')}</dd>
+          </div>
         )}
         {product.shelfLife && (
-          <div className="flex gap-2"><dt className="w-28 shrink-0 font-semibold text-charcoal/60">Shelf life</dt><dd>{product.shelfLife}</dd></div>
+          <div className="flex gap-2">
+            <dt className="w-28 shrink-0 font-semibold text-charcoal/60">Shelf life</dt>
+            <dd className="text-charcoal/85">{product.shelfLife}</dd>
+          </div>
         )}
-        {product.tags.length > 0 && (
-          <div className="flex gap-2"><dt className="w-28 shrink-0 font-semibold text-charcoal/60">Tags</dt><dd>{product.tags.slice(0, 6).join(', ')}</dd></div>
-        )}
+        {(() => {
+          const displayTags = (product.tags && product.tags.length > 0)
+            ? product.tags
+            : [product.category?.toLowerCase(), product.productForm?.toLowerCase() || 'liquid', 'accurate', 'clean'].filter(Boolean);
+          if (!displayTags || displayTags.length === 0) return null;
+          return (
+            <div className="flex items-start gap-2 pt-1" id="product-tags">
+              <dt className="w-28 shrink-0 font-semibold text-charcoal/60 pt-1">Tags</dt>
+              <dd className="flex flex-wrap gap-1.5">
+                {displayTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 transition hover:bg-primary/10 hover:text-primary"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          );
+        })()}
       </dl>
     </div>
   );

@@ -135,6 +135,20 @@ function SuccessInner() {
               <strong>{formatINR((i.price || 0) * (i.quantity || 0))}</strong>
             </div>
           ))}
+          {Boolean((order.discount || 0) > 0) && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 14,
+                margin: "6px 0",
+                color: "#047857",
+              }}
+            >
+              <span>Discount {order.couponCode ? `(${order.couponCode})` : ""}</span>
+              <span>−{formatINR(order.discount || 0)}</span>
+            </div>
+          )}
           <div
             style={{
               display: "flex",
@@ -192,16 +206,43 @@ function SuccessInner() {
       )}
 
       <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
+        {orderNumber && (
+          <Link
+            href={`/track?orderNumber=${encodeURIComponent(orderNumber)}`}
+            className="primary-button"
+            style={{
+              background: "#244892",
+              color: "#fff",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            Track Order Live →
+          </Link>
+        )}
         {isAuthenticated ? (
-          <Link href="/profile?tab=orders" className="primary-button">
+          <Link
+            href="/profile?tab=orders"
+            className="primary-button"
+            style={{ background: "#fff", color: "var(--color-charcoal)" }}
+          >
             View my orders
           </Link>
         ) : (
-          <Link href={`/orders${guestPhone ? `?phone=${encodeURIComponent(guestPhone)}` : ""}`} className="primary-button">
+          <Link
+            href={`/orders${guestPhone ? `?phone=${encodeURIComponent(guestPhone)}` : ""}`}
+            className="primary-button"
+            style={{ background: "#fff", color: "var(--color-charcoal)" }}
+          >
             Look up my orders
           </Link>
         )}
-        <Link href="/shop" className="primary-button" style={{ background: "#fff", color: "var(--color-charcoal)" }}>
+        <Link
+          href="/shop"
+          className="primary-button"
+          style={{ background: "#fff", color: "var(--color-charcoal)" }}
+        >
           Continue shopping
         </Link>
       </div>

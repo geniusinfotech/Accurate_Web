@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev --port 9011",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test lib/shop-filters.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

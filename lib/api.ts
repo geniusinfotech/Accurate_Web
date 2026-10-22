@@ -47,7 +47,7 @@ export const api = {
 
 export function getImageUrl(path: string): string {
   if (!path) return '';
-  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/images/')) return path;
   if (path.startsWith('/')) return `${SERVER_URL}${path}`;
   // Bare filenames (e.g. "compressed-123.png" stored by deals-offers,
   // testimonials) live under the static /uploads/ dir.
@@ -56,7 +56,8 @@ export function getImageUrl(path: string): string {
 
 export function getUploadUrl(path?: string, folder?: string): string {
   if (!path) return `${API_URL}/upload/image`;
-  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/')) return getImageUrl(path);
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/images/')) return getImageUrl(path);
+  if (path.startsWith('/')) return getImageUrl(path);
   // Bare filename + known subfolder (e.g. banners live in /uploads/banners/).
   if (folder) return `${SERVER_URL}/uploads/${folder}/${path}`;
   return getImageUrl(path);

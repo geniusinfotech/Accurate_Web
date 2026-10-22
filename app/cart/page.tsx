@@ -102,14 +102,7 @@ function CartPageInner() {
         </div>
       ) : (
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 360px",
-            gap: "2rem",
-            alignItems: "start",
-            marginTop: "1.5rem",
-          }}
-          className="cart-layout"
+          className="cart-layout grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start mt-6"
         >
           <div className="cart-items" style={{ display: "grid", gap: 12 }}>
             {entries.map(([id, qty]) => {
@@ -198,7 +191,7 @@ function CartPageInner() {
               Shipping &amp; discounts are calculated at checkout from the live server quote.
             </p>
             <button className="checkout" style={{ width: "100%" }} onClick={() => router.push("/checkout")}>
-              Proceed to checkout <ArrowRight size={18} />
+              Proceed to checkout / Buy now <ArrowRight size={18} />
             </button>
             <div
               style={{

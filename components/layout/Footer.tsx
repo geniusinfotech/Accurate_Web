@@ -14,14 +14,10 @@ import {
 const TRUST_PILLARS = [
   {
     icon: Truck,
-    title: "Free Shipping in India",
+    title: "Shipping Across India",
     description: "Prompt dispatch from our Surat facility",
   },
-  {
-    icon: ShieldCheck,
-    title: "ISO 9001:2015 Certified",
-    description: "Consistent quality in every single batch",
-  },
+
   {
     icon: Droplets,
     title: "Concentrated Care",
@@ -42,7 +38,7 @@ const EXPLORE_LINKS = [
 ];
 
 const SUPPORT_LINKS = [
-  { href: "/orders", label: "Track My Order" },
+  { href: "/track", label: "Track My Order" },
   { href: "/shipping-policy", label: "Shipping Policy" },
   { href: "/return-refund-policy", label: "Returns & Refund Policy" },
   { href: "/shipping-returns", label: "Delivery & Returns Overview" },
@@ -57,7 +53,7 @@ export function Footer() {
       ========================================================= */}
       <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-xs">
         <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12 xl:px-16 py-8">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {TRUST_PILLARS.map((pillar) => {
               const Icon = pillar.icon;
               return (
@@ -185,7 +181,7 @@ export function Footer() {
             </p>
             <div className="space-y-3.5">
               <a
-                href="mailto:hello@accurateliquid.in"
+                href="mailto:accurateliquid@gmail.com"
                 className="group flex items-start gap-3 text-xs text-[#244892] transition-colors hover:text-[#244892]"
               >
                 <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white border border-slate-200 text-[#244892] shadow-xs group-hover:border-[#244892]/40 group-hover:bg-[#edf2fe] transition-colors">
@@ -193,7 +189,7 @@ export function Footer() {
                 </span>
                 <div className="min-w-0 pt-0.5">
                   <span className="block font-semibold text-[#0e1117] group-hover:text-[#244892] transition-colors">
-                    hello@accurateliquid.in
+                    accurateliquid@gmail.com
                   </span>
                   <span className="text-[11px] text-[#9ca3af]">
                     Direct support &amp; inquiries
@@ -224,7 +220,7 @@ export function Footer() {
                     Working Hours
                   </span>
                   <span className="text-[11px] text-[#244892]">
-                    Mon – Sat: 9:00 AM – 7:00 PM IST
+                    Mon – Sat: 9:30 AM – 8:30 PM IST
                   </span>
                 </div>
               </div>

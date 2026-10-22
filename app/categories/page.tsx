@@ -52,8 +52,7 @@ export default function CategoriesPage() {
               name: cat.name,
               slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, "-"),
               image:
-                cat.homepageCoverImage ||
-                cat.image ||
+                getImageUrl(cat.image || cat.homepageCoverImage) ||
                 fallbackCategories[index % fallbackCategories.length].image,
             }))
           );

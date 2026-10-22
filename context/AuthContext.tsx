@@ -1,20 +1,29 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { apiRequest } from '@/lib/api-client'
 import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '@/lib/types/api'
 import type { Permission } from '@/lib/admin-permissions'
+import { calculateProfileCompletion, type ProfileCompletionResult } from '@/lib/profile-completion'
 
-interface AuthUser {
+export interface AuthUser {
   id: string
   name: string
+  firstname?: string
+  lastname?: string
+  username?: string
   email: string
   role: 'admin' | 'manager' | 'user' | ''
   roles: string[]
+  phone?: string
+  addresses?: any[]
+  avatar?: string
 }
 
 interface AuthContextType {
   user: AuthUser | null
+  profileCompletion: ProfileCompletionResult
+  syncProfileUser: (data: any) => void
   permissions: Permission[] | null
   hasPermission: (required: string | string[]) => boolean
   isLoading: boolean
@@ -37,10 +46,7 @@ function mapRoles(roles: string[]): AuthUser['role'] {
 }
 
 /**
- * The auth endpoints return a flat payload (no `user` wrapper): login gives
- * { userId, email, roles, username, ... } and /auth/me gives the JWT claims
- * { userId, _id, sub, username, email, roles }. Neither carries firstname /
- * lastname, so the display name falls back to the username / email local-part.
+ * Normalizes user payload from auth endpoints or /users/me into AuthUser.
  */
 function toAuthUser(userData: any): AuthUser {
   const rawRoles = normalizeRoles(userData?.roles)
@@ -56,9 +62,15 @@ function toAuthUser(userData: any): AuthUser {
   return {
     id: userData?.id || userData?._id || userData?.userId || userData?.sub || '',
     name,
+    firstname: first || undefined,
+    lastname: last || undefined,
+    username: userData?.username || undefined,
     email: userData?.email || '',
     role: mapRoles(roles),
     roles,
+    phone: userData?.phone || undefined,
+    addresses: Array.isArray(userData?.addresses) ? userData.addresses : (userData?.address ? [userData.address] : []),
+    avatar: userData?.avatar || undefined,
   }
 }
 
@@ -71,8 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permission[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const profileCompletion = useMemo(() => calculateProfileCompletion(user), [user])
+
+  const syncProfileUser = useCallback((partial: any) => {
+    if (!partial) return
+    setUser((prev) => {
+      if (!prev) return toAuthUser(partial)
+      return toAuthUser({ ...prev, ...partial })
+    })
+  }, [])
+
   const fetchPermissions = useCallback(async (role: AuthUser['role']) => {
-    if (role === 'admin') {
+    // Only managers have a permission config; admins can do everything, customers nothing.
+    if (role !== 'manager') {
       setPermissions(null)
       return
     }
@@ -112,7 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // /auth/me returns the JWT claims object directly.
       if (response && (response._id || response.userId || response.sub)) {
-        const authUser = toAuthUser(response)
+        let fullUser: any = null
+        try {
+          fullUser = await apiRequest<any>('/users/me', { method: 'GET' })
+        } catch {
+          // Graceful fallback to JWT claims if /users/me is temporarily unreachable
+        }
+        const authUser = toAuthUser(fullUser ? { ...response, ...fullUser } : response)
         setUser(authUser)
         await fetchPermissions(authUser.role)
       } else {
@@ -138,7 +167,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       })
       if (response) {
-        const authenticatedUser = toAuthUser(response)
+        let fullUser: any = null
+        try {
+          fullUser = await apiRequest<any>('/users/me', { method: 'GET' })
+        } catch {
+          // Ignore
+        }
+        const authenticatedUser = toAuthUser(fullUser ? { ...response, ...fullUser } : response)
         setUser(authenticatedUser)
         await fetchPermissions(authenticatedUser.role)
         return authenticatedUser
@@ -181,6 +216,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        profileCompletion,
+        syncProfileUser,
         permissions,
         hasPermission,
         isLoading,

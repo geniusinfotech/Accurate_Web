@@ -3,12 +3,12 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BadgePercent, Eye, EyeOff, Home, Lock, Package, UserRound } from "lucide-react";
+import { BadgePercent, CheckCircle2, Eye, EyeOff, Home, Lock, Package, UserRound } from "lucide-react";
 import { PageFrame } from "@/components/storefront";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { apiRequest } from "@/lib/api-client";
-import { formatINR, type LoyaltyCoupon, type ProfileUser, type ShopOrder } from "@/lib/checkout";
+import { formatINR, parseAddressDetails, type LoyaltyCoupon, type ProfileUser, type ShopOrder } from "@/lib/checkout";
 
 type Tab = "profile" | "addresses" | "orders" | "loyalty" | "security";
 
@@ -37,16 +37,15 @@ const labelStyle: React.CSSProperties = {
 };
 
 function addrDisplay(a: NonNullable<ProfileUser["addresses"]>[number]): string {
-  return [a.line1 || (a as any).street, a.line2, a.city, a.state, a.pincode || (a as any).zip]
-    .filter(Boolean)
-    .join(", ");
+  const { fullAddress, pincode: pin } = parseAddressDetails(a);
+  return pin ? `${fullAddress} — ${pin}` : fullAddress;
 }
 
 function ProfileInner() {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
-  const { isAuthenticated, isLoading: authLoading, logout, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, logout, user, profileCompletion, syncProfileUser } = useAuth();
 
   const initialTab = useMemo<Tab>(() => {
     const t = params.get("tab");
@@ -96,6 +95,7 @@ function ProfileInner() {
     try {
       const data = await apiRequest<ProfileUser>("/users/me");
       setMe(data);
+      syncProfileUser(data);
       const full = `${data.firstname || ""} ${data.lastname || ""}`.trim() || data.username || "";
       setName(full);
       setPhone(data.phone || "");
@@ -104,7 +104,7 @@ function ProfileInner() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, syncProfileUser]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) refreshMe();
@@ -114,15 +114,21 @@ function ProfileInner() {
     if (!isAuthenticated || (tab !== "orders" && tab !== "loyalty")) return;
     if (tab === "orders") {
       setOrdersLoading(true);
-      apiRequest<ShopOrder[]>("/orders/my-orders")
-        .then((o) => setOrders(Array.isArray(o) ? o : []))
+      apiRequest<any>("/orders/my-orders")
+        .then((o) => {
+          const list = Array.isArray(o) ? o : Array.isArray(o?.items) ? o.items : [];
+          setOrders(list);
+        })
         .catch((e: any) => toast.error(e?.message || "Could not load orders."))
         .finally(() => setOrdersLoading(false));
     }
     if (tab === "loyalty") {
       setLoyaltyLoading(true);
-      apiRequest<LoyaltyCoupon[]>("/coupons/my-loyalty")
-        .then((c) => setLoyalty(Array.isArray(c) ? c : []))
+      apiRequest<any>("/coupons/my-loyalty")
+        .then((c) => {
+          const list = Array.isArray(c) ? c : Array.isArray(c?.items) ? c.items : [];
+          setLoyalty(list);
+        })
         .catch((e: any) => toast.error(e?.message || "Could not load loyalty coupons."))
         .finally(() => setLoyaltyLoading(false));
     }
@@ -143,6 +149,7 @@ function ProfileInner() {
         }),
       });
       setMe(updated);
+      syncProfileUser(updated);
       toast.success("Profile updated!");
     } catch (e: any) {
       toast.error(e?.message || "Could not save profile.");
@@ -170,6 +177,7 @@ function ProfileInner() {
         }),
       });
       setMe(updated);
+      syncProfileUser(updated);
       setAStreet("");
       setACity("");
       setAState("");
@@ -190,6 +198,7 @@ function ProfileInner() {
         method: "DELETE",
       });
       setMe(updated);
+      syncProfileUser(updated);
       toast.success("Address removed.");
     } catch (e: any) {
       toast.error(e?.message || "Could not remove address.");
@@ -206,6 +215,7 @@ function ProfileInner() {
         body: JSON.stringify({}),
       });
       setMe(updated);
+      syncProfileUser(updated);
       toast.success("Default address updated.");
     } catch (e: any) {
       toast.error(e?.message || "Could not update default address.");
@@ -273,6 +283,111 @@ function ProfileInner() {
         >
           Log out
         </button>
+      </div>
+
+      {/* Profile Completion Overview Card */}
+      <div
+        style={{
+          border: "1px solid var(--color-border-gray, #e5e0d8)",
+          borderRadius: 16,
+          padding: "18px 22px",
+          background: profileCompletion.isComplete ? "rgba(16, 185, 129, 0.04)" : "#fff",
+          maxWidth: 760,
+          margin: "18px 0 20px",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Profile Completeness</h3>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  padding: "2px 10px",
+                  borderRadius: 9999,
+                  background: profileCompletion.isComplete ? "#d1fae5" : "rgba(36, 72, 146, 0.1)",
+                  color: profileCompletion.isComplete ? "#047857" : "#244892",
+                }}
+              >
+                {profileCompletion.percentage}%
+              </span>
+            </div>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--color-muted)" }}>
+              {profileCompletion.isComplete
+                ? "Your profile is 100% complete! Faster checkout is enabled."
+                : `${profileCompletion.completedCount} of 4 details complete. Complete remaining details for seamless 1-click ordering.`}
+            </p>
+          </div>
+
+          <div style={{ minWidth: 160, flex: 1, maxWidth: 220 }}>
+            <div style={{ height: 8, width: "100%", background: "#e2e8f0", borderRadius: 9999, overflow: "hidden" }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${profileCompletion.percentage}%`,
+                  background: profileCompletion.isComplete ? "#10b981" : "#244892",
+                  borderRadius: 9999,
+                  transition: "width 0.4s ease",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Items Checklist Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 10,
+            marginTop: 16,
+            paddingTop: 14,
+            borderTop: "1px solid #f1f5f9",
+          }}
+        >
+          {profileCompletion.items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                if (item.id === "address") setTab("addresses");
+                else setTab("profile");
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1px solid",
+                borderColor: item.isCompleted ? "#d1fae5" : "#e2e8f0",
+                background: item.isCompleted ? "#f0fdf4" : "#f8fafc",
+                fontSize: 12,
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {item.isCompleted ? (
+                <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0 }} />
+              ) : (
+                <span
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    border: "2px solid #94a3b8",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <span style={{ fontWeight: 600, color: item.isCompleted ? "#065f46" : "#475569" }}>
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, margin: "18px 0", flexWrap: "wrap" }}>
@@ -409,8 +524,27 @@ function ProfileInner() {
             <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
               {orders.map((o) => (
                 <div key={o._id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 14, fontSize: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                    <strong>{o.orderNumber}</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <strong>{o.orderNumber}</strong>
+                      <Link
+                        href={`/track?orderNumber=${encodeURIComponent(o.orderNumber)}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "var(--color-primary, #244892)",
+                          textDecoration: "none",
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: "rgba(36, 72, 146, 0.08)",
+                        }}
+                      >
+                        Track order →
+                      </Link>
+                    </div>
                     <span style={{ fontSize: 12, color: "var(--color-muted)" }}>
                       {o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-IN") : ""}
                     </span>
@@ -470,7 +604,7 @@ function ProfileInner() {
               ))}
             </div>
             <p style={{ fontSize: 12, color: "var(--color-muted)", marginTop: 10 }}>
-              Apply codes at checkout — validation happens live, discounts are display-only until the backend attaches coupons to orders.
+              Apply unlocked codes at checkout to receive instant discounts on your order summary and payment.
             </p>
           </div>
         )}

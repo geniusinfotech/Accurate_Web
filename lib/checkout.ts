@@ -19,6 +19,8 @@ export interface PaymentQuote {
   shippingCost: number;
   discount: number;
   totalAmount: number;
+  couponDiscount?: number;
+  couponCode?: string;
 }
 
 export interface RazorpayOrderResponse {
@@ -51,6 +53,8 @@ export interface ShopOrder {
   discount: number;
   shippingCost: number;
   totalAmount: number;
+  couponDiscount?: number;
+  couponCode?: string;
   paymentStatus: string;
   paymentId?: string;
   orderStatus: string;
@@ -146,4 +150,37 @@ export function isValidPincode(pincode: string): boolean {
 export function formatINR(n: number): string {
   if (!Number.isFinite(n)) return "₹0";
   return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+
+export interface ParsedAddress {
+  fullAddress: string;
+  pincode: string;
+  phone: string;
+}
+
+/** Safely extracts unified street address, 6-digit pincode, and contact phone from any address object */
+export function parseAddressDetails(addr: any): ParsedAddress {
+  if (!addr || typeof addr !== "object") {
+    return { fullAddress: "", pincode: "", phone: "" };
+  }
+  const street = String(addr.street ?? addr.line1 ?? addr.address ?? "").trim();
+  const line2 = String(addr.line2 ?? "").trim();
+  const city = String(addr.city ?? "").trim();
+  const state = String(addr.state ?? "").trim();
+
+  const parts: string[] = [];
+  if (street) parts.push(street);
+  if (line2 && !street.toLowerCase().includes(line2.toLowerCase())) parts.push(line2);
+  if (city && !street.toLowerCase().includes(city.toLowerCase())) parts.push(city);
+  if (state && !street.toLowerCase().includes(state.toLowerCase())) parts.push(state);
+
+  const fullAddress = parts.join(", ") || street;
+
+  const rawPin = String(addr.pincode ?? addr.zip ?? addr.postal_code ?? addr.postcode ?? "").trim();
+  const pincode = rawPin.replace(/\D/g, "").slice(0, 6);
+
+  const rawPhone = String(addr.phone ?? addr.mobile ?? "").trim();
+  const phone = rawPhone.replace(/\D/g, "").slice(0, 10);
+
+  return { fullAddress, pincode, phone };
 }

@@ -176,26 +176,32 @@ export function ProductDetail({ id: propId }: { id?: string }) {
           </nav>
         </div>
 
-        {/* Hero */}
-        <section className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <ProductGallery
-            product={product}
-            images={images}
-            activeIndex={imageIndex}
-            onSelect={setImageIndex}
-            lightboxOpen={lightbox}
-            onLightbox={setLightbox}
-            discount={discount}
-          />
-          <ProductInfo
-            product={product}
-            variant={variant}
-            onVariant={pickVariant}
-            fragrance={fragrance}
-            onFragrance={setFragrance}
-            quantity={quantity}
-            onQuantity={setQuantity}
-          />
+        {/* Hero: Fixed/Sticky Product Gallery with Scrolling Side Details */}
+        <section className="grid gap-8 lg:gap-12 lg:grid-cols-[1.05fr_0.95fr] relative">
+          <div className="relative">
+            <div className="lg:sticky lg:top-24">
+              <ProductGallery
+                product={product}
+                images={images}
+                activeIndex={imageIndex}
+                onSelect={setImageIndex}
+                lightboxOpen={lightbox}
+                onLightbox={setLightbox}
+                discount={discount}
+              />
+            </div>
+          </div>
+          <div className="min-w-0" id="product-side-details">
+            <ProductInfo
+              product={product}
+              variant={variant}
+              onVariant={pickVariant}
+              fragrance={fragrance}
+              onFragrance={setFragrance}
+              quantity={quantity}
+              onQuantity={setQuantity}
+            />
+          </div>
         </section>
 
         {/* Benefits strip */}

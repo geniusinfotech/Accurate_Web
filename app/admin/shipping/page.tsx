@@ -9,10 +9,11 @@ import { modalInputCls, stackedLabelCls, inr } from "@/lib/admin-ui";
 import { Truck, ShieldCheck, Save, Loader2, DollarSign, Clock, PackageCheck } from "lucide-react";
 import type { ShippingSettings } from "@/lib/types/api";
 
+// What checkout charges until something is saved: ₹100 flat, no free-shipping threshold.
 const defaultSettings: ShippingSettings = {
-  freeShippingAbove: 999,
-  flatRate: 49,
-  codCharge: 30,
+  freeShippingAbove: 0,
+  flatRate: 100,
+  codCharge: 0,
   estimatedDays: "3-5 Business Days",
 };
 
@@ -27,13 +28,14 @@ export default function ShippingChargesPage() {
     let mounted = true;
     async function loadShipping() {
       try {
-        const res = await apiRequest("/settings/shipping").catch(() => null);
-        if (mounted && res) {
+        // The API answers { key, value }; value is null until something is saved.
+        const saved = (await apiRequest("/settings/shipping").catch(() => null))?.value;
+        if (mounted && saved && typeof saved === "object") {
           setSettings({
-            freeShippingAbove: res.freeShippingAbove ?? defaultSettings.freeShippingAbove,
-            flatRate: res.flatRate ?? defaultSettings.flatRate,
-            codCharge: res.codCharge ?? defaultSettings.codCharge,
-            estimatedDays: res.estimatedDays || defaultSettings.estimatedDays,
+            freeShippingAbove: saved.freeShippingAbove ?? defaultSettings.freeShippingAbove,
+            flatRate: saved.flatRate ?? saved.default ?? defaultSettings.flatRate,
+            codCharge: saved.codCharge ?? defaultSettings.codCharge,
+            estimatedDays: saved.estimatedDays || defaultSettings.estimatedDays,
           });
         }
       } catch (err) {
@@ -53,9 +55,16 @@ export default function ShippingChargesPage() {
     setSaving(true);
     try {
       await apiRequest("/settings/shipping", {
-        method: "PUT",
-        body: JSON.stringify(settings),
-      }).catch(() => null);
+        method: "POST",
+        body: JSON.stringify({
+          value: {
+            ...settings,
+            freeShippingAbove: Number(settings.freeShippingAbove) || 0,
+            flatRate: Number(settings.flatRate) || 0,
+            codCharge: Number(settings.codCharge) || 0,
+          },
+        }),
+      });
       toast.success("Shipping settings saved successfully");
       await alert("Shipping rates and rules updated successfully.", "success");
     } catch (err: any) {
@@ -81,7 +90,7 @@ export default function ShippingChargesPage() {
             <Truck className="h-5 w-5 text-gold" />
           </div>
           <p className="font-serif text-2xl font-bold text-charcoal mt-2">{inr(settings.freeShippingAbove)}</p>
-          <p className="text-xs text-charcoal/50 mt-1">Orders above this get zero shipping cost</p>
+          <p className="text-xs text-charcoal/50 mt-1">Orders of this amount or more ship free (0 = never free)</p>
         </div>
 
         <div className="bg-white border border-border-gray rounded-xl p-5 shadow-soft">

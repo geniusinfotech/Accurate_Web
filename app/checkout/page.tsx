@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, BadgePercent, Lock, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgePercent, CheckCircle2, Lock, MapPin, Plus, ShoppingBag, Tag, X } from "lucide-react";
 import { PageFrame, useStore } from "@/components/storefront";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
@@ -14,6 +14,7 @@ import {
   formatINR,
   isValidPhone,
   isValidPincode,
+  parseAddressDetails,
   type PaymentMethod,
   type ProfileUser,
   type RazorpayOrderResponse,
@@ -54,10 +55,50 @@ function CheckoutInner() {
   const [couponCode, setCouponCode] = useState("");
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountValue: number;
+    discountType: string;
+  } | null>(null);
   const [quote, setQuote] = useState<RazorpayOrderResponse | null>(null);
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Saved Delivery Addresses from user profile
+  const [savedAddresses, setSavedAddresses] = useState<NonNullable<ProfileUser["addresses"]>>([]);
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | "new">(0);
+  const [saveToProfile, setSaveToProfile] = useState(false);
+  const [newAddressLabel, setNewAddressLabel] = useState("Home");
+
+  function applySavedAddress(addr: NonNullable<ProfileUser["addresses"]>[number]) {
+    const { fullAddress, pincode: pin, phone: ph } = parseAddressDetails(addr);
+    setAddress(fullAddress);
+    setPincode(pin);
+    if (ph) {
+      setPhone(ph);
+    }
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (fullAddress) delete next.address;
+      if (pin) delete next.pincode;
+      if (ph) delete next.phone;
+      return next;
+    });
+  }
+
+  function handleSelectAddress(idx: number) {
+    setSelectedAddressIndex(idx);
+    if (savedAddresses[idx]) {
+      applySavedAddress(savedAddresses[idx]);
+    }
+  }
+
+  function handleSelectNewAddress() {
+    setSelectedAddressIndex("new");
+    setAddress("");
+    setPincode("");
+  }
 
   const items = useMemo(
     () => cartToOrderItems(cart, cartMeta, products),
@@ -74,7 +115,7 @@ function CheckoutInner() {
     loadRazorpayScript().catch(() => {});
   }, []);
 
-  // Pre-fill from profile for logged-in shoppers.
+  // Pre-fill from profile for logged-in shoppers and load saved addresses.
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
     let cancelled = false;
@@ -85,16 +126,44 @@ function CheckoutInner() {
           `${me.firstname || ""} ${me.lastname || ""}`.trim() || me.username || "";
         if (fullName && !customerName) setCustomerName(fullName);
         if (me.phone && !phone) setPhone(me.phone);
-        const def =
-          me.addresses?.find((a) => a.isDefault) || me.addresses?.[0];
-        if (def) {
-          const street = def.line1 || def.street || "";
-          const line = [street, def.line2, def.city, def.state]
-            .filter(Boolean)
-            .join(", ");
-          if (line && !address) setAddress(line);
-          const pin = def.pincode || def.zip || "";
-          if (pin && !pincode) setPincode(pin);
+
+        // Collect all addresses (array and singular object fallback)
+        let list: NonNullable<ProfileUser["addresses"]> = [];
+        if (Array.isArray(me.addresses) && me.addresses.length > 0) {
+          list = [...me.addresses];
+        } else if ((me as any).address && typeof (me as any).address === "object") {
+          const single = (me as any).address;
+          if (single.street || single.city || single.line1) {
+            list = [{
+              label: "Saved Address",
+              street: single.street || single.line1,
+              city: single.city,
+              state: single.state,
+              zip: single.zip,
+              pincode: single.pincode || single.zip,
+              isDefault: true,
+            }];
+          }
+        }
+
+        // Filter out empty ghost records that have no valid address text
+        const validList = list.filter((a: any) => {
+          if (!a || typeof a !== "object") return false;
+          const s = String(a.street || a.line1 || a.address || "").trim();
+          const c = String(a.city || "").trim();
+          const p = String(a.pincode || a.zip || a.postal_code || "").trim();
+          return Boolean(s || c || p);
+        });
+
+        setSavedAddresses(validList);
+
+        if (validList.length > 0) {
+          const defIdx = validList.findIndex((a) => a.isDefault);
+          const activeIdx = defIdx >= 0 ? defIdx : 0;
+          setSelectedAddressIndex(activeIdx);
+          applySavedAddress(validList[activeIdx]);
+        } else {
+          setSelectedAddressIndex("new");
         }
       })
       .catch(() => {
@@ -118,7 +187,7 @@ function CheckoutInner() {
     return Object.keys(errs).length === 0;
   }
 
-  async function fetchQuote(): Promise<RazorpayOrderResponse | null> {
+  async function fetchQuote(customCoupon?: string): Promise<RazorpayOrderResponse | null> {
     if (items.length === 0) {
       toast.error("Your cart is empty.");
       return null;
@@ -130,9 +199,18 @@ function CheckoutInner() {
     }
     setQuoteBusy(true);
     try {
+      const activeCoupon =
+        customCoupon !== undefined
+          ? customCoupon.trim()
+          : (appliedCoupon?.code || couponCode.trim());
+
       const res = await apiRequest<RazorpayOrderResponse>("/payment/create-order", {
         method: "POST",
-        body: JSON.stringify({ items, pincode: pincode.trim() }),
+        body: JSON.stringify({
+          items,
+          pincode: pincode.trim(),
+          ...(activeCoupon ? { couponCode: activeCoupon } : {}),
+        }),
       });
       setQuote(res);
       return res;
@@ -150,17 +228,33 @@ function CheckoutInner() {
       return;
     }
     const q = await fetchQuote();
-    if (q) setStep(2);
+    if (q) {
+      if (saveToProfile && selectedAddressIndex === "new" && isAuthenticated && address.trim()) {
+        try {
+          const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+          const inferredCity = parts.length >= 2 ? parts[parts.length - 1] : "Surat";
+          await apiRequest("/users/addresses", {
+            method: "POST",
+            body: JSON.stringify({
+              street: address.trim(),
+              city: inferredCity || "Surat",
+              zip: pincode.trim(),
+              label: newAddressLabel.trim() || "Delivery Address",
+              phone: phone.trim(),
+            }),
+          });
+        } catch {
+          // Non-blocking background save
+        }
+      }
+      setStep(2);
+    }
   }
 
   async function handleValidateCoupon() {
     const code = couponCode.trim().toUpperCase();
     if (!code) {
       setCouponMsg("Enter a coupon code first.");
-      return;
-    }
-    if (!isAuthenticated) {
-      setCouponMsg("Log in to validate loyalty coupons.");
       return;
     }
     setCouponBusy(true);
@@ -174,14 +268,36 @@ function CheckoutInner() {
         coupon?.discountType === "percent"
           ? `${coupon.discountValue}% off`
           : `${formatINR(coupon.discountValue)} off`;
-      setCouponMsg(
-        `Code ${code} is valid (${desc}). Note: loyalty discounts are display-only for now — the server total above does not include coupons yet.`,
-      );
-      toast.success(`Coupon ${code} validated.`);
+
+      setAppliedCoupon({
+        code: coupon.code || code,
+        discountValue: coupon.discountValue,
+        discountType: coupon.discountType,
+      });
+      setCouponCode(coupon.code || code);
+      setCouponMsg(`Coupon ${coupon.code || code} applied (${desc})!`);
+      toast.success(`Coupon ${coupon.code || code} applied!`);
+
+      // Refresh quote immediately with the coupon applied
+      if (isValidPincode(pincode)) {
+        await fetchQuote(coupon.code || code);
+      }
     } catch (e: any) {
+      setAppliedCoupon(null);
       setCouponMsg(e?.message || "Invalid or expired coupon.");
+      toast.error(e?.message || "Invalid or expired coupon.");
     } finally {
       setCouponBusy(false);
+    }
+  }
+
+  async function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponMsg(null);
+    toast.info("Coupon removed.");
+    if (isValidPincode(pincode)) {
+      await fetchQuote("");
     }
   }
 
@@ -191,12 +307,14 @@ function CheckoutInner() {
     razorpay_signature?: string;
     paymentId?: string;
   }) {
+    const activeCoupon = appliedCoupon?.code || couponCode.trim();
     const payload = {
       customerName: customerName.trim(),
       phone: phone.trim(),
       address: address.trim(),
       pincode: pincode.trim(),
       items,
+      ...(activeCoupon ? { couponCode: activeCoupon } : {}),
       ...(notes.trim() ? { notes: notes.trim() } : {}),
       ...args,
     };
@@ -242,6 +360,7 @@ function CheckoutInner() {
       // Stash checkout snapshot so the success page can retry order creation
       // without re-charging if the connection drops after payment.
       try {
+        const activeCoupon = appliedCoupon?.code || couponCode.trim();
         window.sessionStorage.setItem(
           "accurate_checkout_backup",
           JSON.stringify({
@@ -250,6 +369,7 @@ function CheckoutInner() {
             address: address.trim(),
             pincode: pincode.trim(),
             items,
+            ...(activeCoupon ? { couponCode: activeCoupon } : {}),
             ...(notes.trim() ? { notes: notes.trim() } : {}),
           }),
         );
@@ -257,7 +377,7 @@ function CheckoutInner() {
         // ignore storage errors
       }
       // Always refresh the quote right before opening Razorpay (amounts may change).
-      const q = await fetchQuote();
+      const q = await fetchQuote(appliedCoupon?.code || couponCode.trim());
       if (!q) {
         setPlacing(false);
         return;
@@ -414,15 +534,8 @@ function CheckoutInner() {
         })}
       </ol>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 360px",
-          gap: "2rem",
-          alignItems: "start",
-          marginTop: "1rem",
-        }}
-      >
+      {/* One column on phones/tablets (summary below the form), two from lg. */}
+      <div className="mt-4 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section
           style={{
             border: "1px solid var(--color-border-gray, #e5e0d8)",
@@ -433,7 +546,142 @@ function CheckoutInner() {
         >
           {step === 1 && (
             <div>
-              <h2 style={{ margin: 0 }}>Delivery details</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2 style={{ margin: 0 }}>Delivery details</h2>
+                {isAuthenticated && (
+                  <Link
+                    href="/profile?tab=addresses"
+                    target="_blank"
+                    style={{ fontSize: 12, fontWeight: 700, color: "#244892", textDecoration: "underline" }}
+                  >
+                    Manage address book ↗
+                  </Link>
+                )}
+              </div>
+
+              {/* Saved Delivery Addresses Selector */}
+              {savedAddresses.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ ...labelStyle, marginTop: 0, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <MapPin size={15} color="#244892" /> Choose delivery address
+                  </label>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {savedAddresses.map((addr, idx) => {
+                      const isSelected = selectedAddressIndex === idx;
+                      const { fullAddress, pincode: pin, phone: ph } = parseAddressDetails(addr);
+                      const labelText = String(addr.label || "").trim() || `Address ${idx + 1}`;
+                      return (
+                        <div
+                          key={idx}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSelectAddress(idx)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSelectAddress(idx);
+                            }
+                          }}
+                          style={{
+                            border: isSelected ? "2px solid #244892" : "1px solid var(--color-border-gray, #e5e0d8)",
+                            borderRadius: 14,
+                            padding: "14px 16px",
+                            cursor: "pointer",
+                            background: isSelected ? "rgba(36, 72, 146, 0.04)" : "#fff",
+                            boxShadow: isSelected ? "0 4px 12px rgba(36, 72, 146, 0.08)" : "none",
+                            transition: "all 0.18s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <input
+                                type="radio"
+                                name="deliveryAddress"
+                                checked={isSelected}
+                                onChange={() => handleSelectAddress(idx)}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ accentColor: "#244892", cursor: "pointer" }}
+                              />
+                              <strong style={{ fontSize: 14, color: "#0e1117" }}>
+                                {labelText}
+                              </strong>
+                              {addr.isDefault && (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    background: "#d1fae5",
+                                    color: "#047857",
+                                    padding: "2px 7px",
+                                    borderRadius: 9999,
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#244892", display: "flex", alignItems: "center", gap: 4 }}>
+                                <CheckCircle2 size={14} /> Deliver here
+                              </span>
+                            )}
+                          </div>
+                          {fullAddress && (
+                            <p style={{ margin: "8px 0 0 24px", fontSize: 13, color: "#334155", lineHeight: 1.45 }}>
+                              {fullAddress}
+                              {pin ? ` — ${pin}` : ""}
+                            </p>
+                          )}
+                          {ph && (
+                            <p style={{ margin: "4px 0 0 24px", fontSize: 12, color: "var(--color-muted)" }}>
+                              Contact: <strong>{ph}</strong>
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Different / New Address Option */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={handleSelectNewAddress}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSelectNewAddress();
+                        }
+                      }}
+                      style={{
+                        border: selectedAddressIndex === "new" ? "2px solid #244892" : "1px dashed var(--color-border-gray, #cbd5e1)",
+                        borderRadius: 14,
+                        padding: "12px 16px",
+                        cursor: "pointer",
+                        background: selectedAddressIndex === "new" ? "rgba(36, 72, 146, 0.04)" : "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        transition: "all 0.18s ease",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="deliveryAddress"
+                        checked={selectedAddressIndex === "new"}
+                        onChange={handleSelectNewAddress}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ accentColor: "#244892", cursor: "pointer" }}
+                      />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: selectedAddressIndex === "new" ? "#244892" : "#475569" }}>
+                        + Deliver to a different / new address
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Recipient info & Address fields */}
               <label style={labelStyle} htmlFor="co-name">
                 Full name *
               </label>
@@ -449,7 +697,7 @@ function CheckoutInner() {
                 <p style={{ color: "#b3261e", fontSize: 12 }}>{fieldErrors.customerName}</p>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
                 <div>
                   <label style={labelStyle} htmlFor="co-phone">
                     Phone *
@@ -499,18 +747,44 @@ function CheckoutInner() {
               </div>
 
               <label style={labelStyle} htmlFor="co-addr">
-                Full address *
+                Full delivery address *
               </label>
               <textarea
                 id="co-addr"
                 style={{ ...inputStyle, minHeight: 84, resize: "vertical" }}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Flat, street, area, city, state"
+                placeholder="Flat / House no., Street, Area, City, State"
                 autoComplete="street-address"
               />
               {fieldErrors.address && (
                 <p style={{ color: "#b3261e", fontSize: 12 }}>{fieldErrors.address}</p>
+              )}
+
+              {/* Save new address checkbox */}
+              {selectedAddressIndex === "new" && isAuthenticated && (
+                <div style={{ marginTop: 12, padding: "12px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                    <input
+                      type="checkbox"
+                      checked={saveToProfile}
+                      onChange={(e) => setSaveToProfile(e.target.checked)}
+                      style={{ accentColor: "#244892" }}
+                    />
+                    Save this address to my profile address book
+                  </label>
+                  {saveToProfile && (
+                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12, color: "#64748b" }}>Label:</span>
+                      <input
+                        style={{ ...inputStyle, padding: "6px 10px", fontSize: 12, maxWidth: 160 }}
+                        value={newAddressLabel}
+                        onChange={(e) => setNewAddressLabel(e.target.value)}
+                        placeholder="Home / Work / Office"
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               <label style={labelStyle} htmlFor="co-notes">
@@ -521,7 +795,7 @@ function CheckoutInner() {
                 style={inputStyle}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Delivery instructions…"
+                placeholder="Delivery instructions or landmark…"
                 maxLength={500}
               />
 
@@ -638,27 +912,82 @@ function CheckoutInner() {
                 </label>
               </div>
 
-              <h3 style={{ margin: "20px 0 6px", fontSize: 15 }}>
-                <BadgePercent size={15} style={{ display: "inline", verticalAlign: -2 }} /> Loyalty
-                coupon (optional)
+              <h3 style={{ margin: "20px 0 6px", fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
+                <BadgePercent size={16} /> Coupon code (optional)
               </h3>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  style={{ ...inputStyle, textTransform: "uppercase" }}
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  placeholder="DIWALI10"
-                />
-                <button
-                  className="primary-button"
-                  style={{ whiteSpace: "nowrap", padding: "0 18px" }}
-                  onClick={handleValidateCoupon}
-                  disabled={couponBusy}
+              {appliedCoupon ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    background: "#ecfdf5",
+                    border: "1px solid #a7f3d0",
+                    borderRadius: 12,
+                    marginTop: 8,
+                  }}
                 >
-                  {couponBusy ? "Checking…" : "Apply"}
-                </button>
-              </div>
-              {couponMsg && <p style={{ fontSize: 13, color: "var(--color-muted)" }}>{couponMsg}</p>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <CheckCircle2 size={18} color="#059669" />
+                    <div>
+                      <div style={{ fontWeight: 700, color: "#065f46", letterSpacing: "0.5px" }}>
+                        {appliedCoupon.code}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#047857" }}>
+                        {appliedCoupon.discountType === "percent"
+                          ? `${appliedCoupon.discountValue}% discount applied`
+                          : `${formatINR(appliedCoupon.discountValue)} discount applied`}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    disabled={couponBusy}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      background: "none",
+                      border: "none",
+                      color: "#dc2626",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: "4px 8px",
+                    }}
+                  >
+                    <X size={14} /> Remove
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    style={{ ...inputStyle, textTransform: "uppercase" }}
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleValidateCoupon();
+                      }
+                    }}
+                    placeholder="Enter coupon code (e.g. DIWALI10)"
+                  />
+                  <button
+                    className="primary-button"
+                    style={{ whiteSpace: "nowrap", padding: "0 18px" }}
+                    onClick={handleValidateCoupon}
+                    disabled={couponBusy || !couponCode.trim()}
+                  >
+                    {couponBusy ? "Checking…" : "Apply"}
+                  </button>
+                </div>
+              )}
+              {couponMsg && !appliedCoupon && (
+                <p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 6 }}>{couponMsg}</p>
+              )}
 
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button
@@ -768,13 +1097,12 @@ function CheckoutInner() {
         </section>
 
         <aside
+          className="lg:sticky lg:top-[88px]"
           style={{
             border: "1px solid var(--color-border-gray, #e5e0d8)",
             borderRadius: 16,
             padding: 20,
             background: "#fff",
-            position: "sticky",
-            top: 88,
           }}
         >
           <h2 style={{ marginTop: 0 }}>Order summary</h2>
@@ -787,10 +1115,32 @@ function CheckoutInner() {
                 <dt>Subtotal</dt>
                 <dd>{formatINR(quote.quote.subtotal)}</dd>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#047857" }}>
-                <dt>Discount</dt>
-                <dd>−{formatINR(quote.quote.discount)}</dd>
-              </div>
+
+              {quote.quote.discount > 0 && (
+                <>
+                  {Boolean(quote.quote.couponDiscount && quote.quote.couponDiscount > 0) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#047857" }}>
+                      <dt style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <Tag size={12} /> Coupon ({quote.quote.couponCode || appliedCoupon?.code})
+                      </dt>
+                      <dd>−{formatINR(quote.quote.couponDiscount!)}</dd>
+                    </div>
+                  )}
+                  {Boolean(quote.quote.discount - (quote.quote.couponDiscount || 0) > 0) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#047857" }}>
+                      <dt>Promotional Discount (10%)</dt>
+                      <dd>−{formatINR(quote.quote.discount - (quote.quote.couponDiscount || 0))}</dd>
+                    </div>
+                  )}
+                  {!quote.quote.couponDiscount && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#047857" }}>
+                      <dt>Discount</dt>
+                      <dd>−{formatINR(quote.quote.discount)}</dd>
+                    </div>
+                  )}
+                </>
+              )}
+
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <dt>Shipping</dt>
                 <dd>{quote.quote.shippingCost === 0 ? "Free" : formatINR(quote.quote.shippingCost)}</dd>
@@ -815,7 +1165,7 @@ function CheckoutInner() {
             </p>
           )}
           <button
-            onClick={fetchQuote}
+            onClick={() => fetchQuote()}
             disabled={quoteBusy || !isValidPincode(pincode)}
             style={{
               width: "100%",

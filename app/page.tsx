@@ -107,13 +107,15 @@ export default function Home() {
         </FadeIn>
 
         <FadeIn>
-          <Testimonials />
-        </FadeIn>
-
-        <FadeIn>
-          <section className="story wrap">
+          <section className="story wrap mt-20">
             <div>
-              <Image src="/logo.png" alt="logo"  width={500} height={500} className="ml-10" />
+              <Image
+                src="/logo.png"
+                alt="logo"
+                width={500}
+                height={500}
+                className="ml-4 sm:ml-10 max-w-[80%] h-auto"
+              />
             </div>
             <div>
               <p className="eyebrow">a little more than clean</p>
@@ -132,6 +134,10 @@ export default function Home() {
               </Link>
             </div>
           </section>
+        </FadeIn>
+
+        <FadeIn>
+          <Testimonials />
         </FadeIn>
       </main>
     </PageFrame>
