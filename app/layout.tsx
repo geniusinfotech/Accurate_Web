@@ -3,13 +3,29 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 import { DialogProvider } from "@/components/admin/ConfirmDialog";
 import { ToastProvider } from "@/components/ui/Toast";
+import { pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Accurate — Pure clean. Certified quality.",
+const home = pageMetadata({
+  title: "Accurate Liquid — Liquid Detergent & Home Cleaning Products",
   description:
-    "Thoughtful home care for the spaces you live in. Proudly made in Surat.",
-  generator: "v0.app",
+    "Shop Accurate Liquid detergent, dishwash, floor and toilet cleaners. Certified-quality home care, proudly made in Surat and delivered across India.",
+  path: "/",
+});
+
+export const metadata: Metadata = {
+  ...home,
+  metadataBase: new URL(SITE_URL),
+  title: { default: home.title as string, template: `%s | ${SITE_NAME}` },
+  applicationName: SITE_NAME,
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {

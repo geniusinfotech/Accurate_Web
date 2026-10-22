@@ -21,27 +21,6 @@ interface TestimonialsProps {
   testimonials?: Testimonial[];
 }
 
-const DEFAULT_TESTIMONIALS: Testimonial[] = [
-  {
-    name: "Accurate Customer",
-    customerPost: "Verified Buyer",
-    text: "The fragrance is fresh, and the wash feels reliable for everyday laundry.",
-    rating: 5,
-  },
-  {
-    name: "Home Care Buyer",
-    customerPost: "Repeat Customer",
-    text: "Simple, dependable products that fit neatly into our daily cleaning routine.",
-    rating: 5,
-  },
-  {
-    name: "Surat Customer",
-    customerPost: "Verified Buyer",
-    text: "Good quality, quick support, and a clean finish that feels consistent.",
-    rating: 5,
-  },
-];
-
 export function Testimonials({
   testimonials: initialTestimonials,
 }: TestimonialsProps) {
@@ -65,10 +44,10 @@ export function Testimonials({
         if (!mounted) return;
         const list = Array.isArray(res) ? res : res?.items || [];
         const active = list.filter((t) => t.isActive !== false);
-        setItems(active.length > 0 ? active : DEFAULT_TESTIMONIALS);
+        setItems(active);
       })
       .catch(() => {
-        if (mounted) setItems(DEFAULT_TESTIMONIALS);
+        if (mounted) setItems([]);
       });
 
     return () => {
@@ -76,7 +55,7 @@ export function Testimonials({
     };
   }, [initialTestimonials]);
 
-  const activeItems = items.length > 0 ? items : DEFAULT_TESTIMONIALS;
+  const activeItems = items;
 
   // Triplicate testimonials to guarantee a seamless continuous loop
   const displayTestimonials = [...activeItems, ...activeItems, ...activeItems];
@@ -138,6 +117,8 @@ export function Testimonials({
     const walk = (x - startX) * 1.5;
     scrollRef.current.scrollLeft = scrollLeft - walk;
   };
+
+  if (activeItems.length === 0) return null;
 
   return (
     <section className="limewash-section relative overflow-hidden py-20 sm:py-24 lg:py-28 border-t border-slate-200 select-none">

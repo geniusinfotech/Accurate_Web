@@ -9,15 +9,6 @@ import { PageFrame } from "@/components/storefront";
 import { api, getImageUrl } from "@/lib/api";
 import type { Category as ApiCategory } from "@/lib/types/api";
 
-const fallbackCategories = [
-  { _id: "1", name: "Laundry Care", slug: "laundry-care", image: "https://images.unsplash.com/photo-1582735689149-c12e524bd645?auto=format&fit=crop&q=80&w=800" },
-  { _id: "2", name: "Dish Care", slug: "dish-care", image: "https://images.unsplash.com/photo-1585002242080-60fbebb84eb6?auto=format&fit=crop&q=80&w=800" },
-  { _id: "3", name: "Surface Care", slug: "surface-care", image: "https://images.unsplash.com/photo-1584820927498-cafe4c10776b?auto=format&fit=crop&q=80&w=800" },
-  { _id: "4", name: "Specialized Cleaning", slug: "specialized-cleaning", image: "https://images.unsplash.com/photo-1596755490731-0df04f4a3e9c?auto=format&fit=crop&q=80&w=800" },
-  { _id: "5", name: "Personal Care", slug: "personal-care", image: "https://images.unsplash.com/photo-1584556812952-905ffd0c611a?auto=format&fit=crop&q=80&w=800" },
-  { _id: "6", name: "Toilet Cleaner", slug: "toilet-cleaner-liquid", image: "https://images.unsplash.com/photo-1584820927506-697960fc5d4c?auto=format&fit=crop&q=80&w=800" },
-];
-
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -34,7 +25,7 @@ const itemVariants: Variants = {
 };
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState(fallbackCategories);
+  const [categories, setCategories] = useState<{ _id: string; name: string; slug: string; image: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,18 +36,14 @@ export default function CategoriesPage() {
         if (!mounted) return;
         const list = Array.isArray(res) ? res : res?.items || [];
         const active = list.filter((c: any) => c.isActive !== false);
-        if (active.length > 0) {
-          setCategories(
-            active.map((cat: any, index: number) => ({
+        setCategories(
+            active.map((cat: any) => ({
               _id: cat._id || cat.id,
               name: cat.name,
               slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, "-"),
-              image:
-                getImageUrl(cat.image || cat.homepageCoverImage) ||
-                fallbackCategories[index % fallbackCategories.length].image,
+              image: getImageUrl(cat.image || cat.homepageCoverImage),
             }))
           );
-        }
       })
       .catch((error) => {
         console.error("Failed to fetch categories:", error);
@@ -88,7 +75,9 @@ export default function CategoriesPage() {
           </p>
         </motion.div>
 
-        {loading ? (
+        {!loading && categories.length === 0 ? (
+          <p className="text-center text-gray-600">Categories are unavailable right now. Please check back soon.</p>
+        ) : loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
           </div>
@@ -104,12 +93,12 @@ export default function CategoriesPage() {
                 <Link href={`/shop?category=${category.slug || category.name.toLowerCase().replace(/ /g, '-')}`}>
                   <div className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 h-[300px] flex flex-col justify-end">
                     <div className="absolute inset-0 bg-gray-200">
-                      <Image
-                        src={category.image || fallbackCategories[index % fallbackCategories.length].image}
+                      {category.image && <Image
+                        src={category.image}
                         alt={category.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
-                      />
+                      />}
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                     <div className="relative z-10 p-6 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">

@@ -1,4 +1,11 @@
 import { PageFrame } from '@/components/storefront'
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Terms & Conditions",
+  description: "Terms and conditions for using the Accurate Liquid website and purchasing our products.",
+  path: "/terms",
+});
 
 const sections = [
   {
