@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Leaf, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Leaf } from 'lucide-react';
 import { PageFrame } from '@/components/storefront';
 import { ProductGrid, WhenProducts } from './ProductGrid';
 import { useToast } from '@/components/ui/Toast';
@@ -119,7 +119,7 @@ export function ProductDetail({ id: propId }: { id?: string }) {
       <PageFrame>
         <main className="product-detail-page mx-auto max-w-[1240px] px-8 py-10">
           <div className="grid gap-10 lg:grid-cols-2">
-            <div className="h-[460px] animate-pulse rounded-3xl bg-cream-dark" />
+            <div className="aspect-square animate-pulse rounded-2xl bg-cream-dark lg:aspect-auto lg:h-[520px]" />
             <div className="space-y-4">
               <div className="h-4 w-1/3 animate-pulse rounded bg-cream-dark" />
               <div className="h-10 w-3/4 animate-pulse rounded bg-cream-dark" />
@@ -138,22 +138,22 @@ export function ProductDetail({ id: propId }: { id?: string }) {
   return (
     <PageFrame>
       <ProductJsonLd product={product} />
-      <main className="product-detail-page mx-auto max-w-[1240px] px-5 md:px-8 pb-20">
+      <main className="product-detail-page mx-auto max-w-[1240px] px-5 md:px-8 pb-28 lg:pb-20">
         {/* Breadcrumb */}
         <div className="product-wrap !px-0">
-          <nav className="flex items-center gap-2 py-5 text-sm text-muted" aria-label="Breadcrumb">
+          <nav className="flex items-center gap-2 py-4 text-sm text-muted md:py-5" aria-label="Breadcrumb">
             <button onClick={() => router.push('/shop')} className="flex items-center gap-1.5 hover:text-charcoal cursor-pointer">
               <ArrowLeft size={15} /> Shop
             </button>
-            <span aria-hidden>/</span>
-            <span>{product.category}</span>
+            <span aria-hidden className="hidden sm:inline">/</span>
+            <span className="hidden sm:inline">{product.category}</span>
             <span aria-hidden>/</span>
             <strong className="text-charcoal truncate max-w-[40vw]">{product.name}</strong>
           </nav>
         </div>
 
         {/* Hero: Fixed/Sticky Product Gallery with Scrolling Side Details */}
-        <section className="grid gap-8 lg:gap-12 lg:grid-cols-[1.05fr_0.95fr] relative">
+        <section className="grid gap-6 lg:gap-14 lg:grid-cols-[1.05fr_0.95fr] relative">
           <div className="relative">
             <div className="lg:sticky lg:top-24">
               <ProductGallery
@@ -179,23 +179,6 @@ export function ProductDetail({ id: propId }: { id?: string }) {
             />
           </div>
         </section>
-
-        {/* Benefits strip */}
-        {product.benefits.length > 0 && (
-          <section className="product-wrap !px-0 mt-14 md:mt-20">
-            <div className="section-eyebrow">WHY YOU&apos;LL LOVE IT</div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everyday cleaning,<br /><em className="font-serif italic font-normal text-primary">made simpler.</em></h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {product.benefits.slice(0, 8).map((b, i) => (
-                <div key={b} className="rounded-3xl border border-border-gray/70 bg-white p-5">
-                  <span className="text-xs font-bold text-muted">0{i + 1}</span>
-                  <Sparkles size={22} className="my-2.5 text-primary" />
-                  <h3 className="font-bold text-charcoal leading-snug">{b}</h3>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         <ProductTabs product={product} />
 
@@ -236,16 +219,6 @@ export function ProductDetail({ id: propId }: { id?: string }) {
         </section>
         </WhenProducts>
 
-        {/* Mobile sticky buy bar */}
-        <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border-gray bg-white/95 backdrop-blur px-4 py-3 flex items-center gap-3 lg:hidden">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-charcoal">{product.name} {variant ? `• ${variant.label}` : ''}</p>
-            <p className="text-sm font-extrabold text-primary">{`₹${((variant?.price ?? product.price) * quantity).toLocaleString('en-IN')}`}</p>
-          </div>
-          <a href="#top" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="rounded-full bg-charcoal text-white text-sm font-bold px-5 py-2.5">
-            Choose pack
-          </a>
-        </div>
       </main>
     </PageFrame>
   );

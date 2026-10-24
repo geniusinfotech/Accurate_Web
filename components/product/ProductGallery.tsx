@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Sparkles, X, ZoomIn } from 'lucide-react';
+import { useCallback, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { getImageUrl } from '@/lib/api';
 import { ProductArt } from '@/components/storefront';
 import type { StoreProduct } from '@/lib/product';
@@ -27,6 +27,15 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
     onSelect(safeIndex < images.length - 1 ? safeIndex + 1 : 0);
   }, [safeIndex, images.length, onSelect]);
 
+  // Horizontal swipe on the main image (touch only; arrows/thumbnails cover mouse users).
+  const touchX = useRef<number | null>(null);
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null || images.length < 2) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) > 40) (dx < 0 ? next : prev)();
+  };
+
   useEffect(() => {
     if (!lightboxOpen) return;
     function onKey(e: KeyboardEvent) {
@@ -40,14 +49,19 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
 
   return (
     <div className="product-gallery w-full">
-      <div className="gallery-main group relative overflow-hidden rounded-3xl border border-border-gray/70 bg-cream/40 shadow-xs">
+      <div className="gallery-main group relative overflow-hidden rounded-2xl bg-limewash">
         {images.length > 0 ? (
-          <div className="relative w-full min-h-[380px] md:min-h-[460px] flex items-center justify-center p-6 select-none overflow-hidden">
+          <div
+            className="relative flex aspect-square w-full select-none items-center justify-center overflow-hidden p-6 lg:aspect-auto lg:min-h-[520px] lg:p-10"
+            style={{ touchAction: 'pan-y' }}
+            onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+            onTouchEnd={onTouchEnd}
+          >
             <img
               src={getImageUrl(images[safeIndex])}
               alt={`${product.name} - Image ${safeIndex + 1}`}
               onClick={() => onLightbox(true)}
-              className="max-h-[420px] w-auto max-w-full object-contain cursor-zoom-in transition-transform duration-300 group-hover:scale-105"
+              className="max-h-full w-auto max-w-full cursor-zoom-in object-contain transition-transform duration-500 motion-reduce:transition-none lg:max-h-[460px] lg:group-hover:scale-[1.03]"
               loading="eager"
             />
             {images.length > 1 && (
@@ -56,7 +70,7 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
                   type="button"
                   onClick={(e) => { e.stopPropagation(); prev(); }}
                   aria-label="Previous image"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 hover:bg-white text-charcoal shadow-md border border-border-gray/50 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute left-3 top-1/2 z-10 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-charcoal shadow-sm transition-opacity hover:bg-white sm:flex lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -64,7 +78,7 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
                   type="button"
                   onClick={(e) => { e.stopPropagation(); next(); }}
                   aria-label="Next image"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 hover:bg-white text-charcoal shadow-md border border-border-gray/50 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute right-3 top-1/2 z-10 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-charcoal shadow-sm transition-opacity hover:bg-white sm:flex lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
                 >
                   <ChevronRight size={20} />
                 </button>
@@ -74,18 +88,10 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
               type="button"
               onClick={() => onLightbox(true)}
               aria-label="Zoom image"
-              title="View fullscreen"
-              className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-white/90 hover:bg-white text-charcoal shadow-sm border border-border-gray/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+              className="absolute right-3 top-3 z-10 flex size-11 items-center justify-center rounded-full bg-white/90 text-charcoal shadow-sm transition-opacity hover:bg-white lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
             >
-              <ZoomIn size={16} />
+              <ZoomIn size={17} />
             </button>
-
-            {images.length > 1 && (
-              <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full text-xs font-semibold bg-charcoal/70 text-white flex items-center gap-1.5 z-10">
-                <ImageIcon size={12} />
-                <span>{safeIndex + 1} / {images.length}</span>
-              </div>
-            )}
           </div>
         ) : (
           <ProductArt
@@ -102,39 +108,40 @@ export function ProductGallery({ product, images, activeIndex, onSelect, lightbo
         )}
 
         {discount > 0 && (
-          <span className="discount-badge absolute top-4 left-4 px-3 py-1.5 rounded-full bg-charcoal text-white text-xs font-bold tracking-wide z-10">
+          <span className="discount-badge absolute left-3 top-3 z-10 rounded-full bg-charcoal px-3 py-1.5 text-xs font-bold tracking-wide text-white">
             {discount}% OFF
           </span>
         )}
-        <span className="essential-badge absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-white/95 border border-border-gray/70 text-xs font-semibold flex items-center gap-1.5 text-charcoal shadow-xs z-10">
-          <Sparkles size={14} className="text-primary" />
-          {product.productForm || 'Everyday essential'}
-        </span>
       </div>
 
       {images.length > 1 && (
-        <div className="flex flex-wrap gap-2.5 mt-3" role="tablist" aria-label="Product images">
-          {images.map((image, index) => {
-            const isActive = safeIndex === index;
-            return (
-              <button
-                key={`${image}-${index}`}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-label={`Select product image ${index + 1}`}
-                onClick={() => onSelect(index)}
-                className={`relative w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden border-2 bg-white transition-all p-1 flex items-center justify-center cursor-pointer ${
-                  isActive
-                    ? 'border-primary ring-2 ring-primary/20 scale-105 shadow-sm'
-                    : 'border-border-gray/80 hover:border-charcoal/40 opacity-75 hover:opacity-100'
-                }`}
-              >
-                <img src={getImageUrl(image)} alt={`${product.name} ${index + 1}`} className="w-full h-full object-contain" loading="lazy" />
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <div className="mt-3 flex justify-center gap-2 sm:hidden" aria-hidden>
+            {images.map((_, index) => (
+              <span key={index} className={`h-1.5 rounded-full transition-all ${safeIndex === index ? 'w-5 bg-primary' : 'w-1.5 bg-border-gray'}`} />
+            ))}
+          </div>
+          <div className="mt-3 hidden flex-wrap gap-2.5 sm:flex" role="tablist" aria-label="Product images">
+            {images.map((image, index) => {
+              const isActive = safeIndex === index;
+              return (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={`Select product image ${index + 1}`}
+                  onClick={() => onSelect(index)}
+                  className={`flex size-16 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 bg-white p-1 transition-colors md:size-20 ${
+                    isActive ? 'border-primary' : 'border-border-gray/80 opacity-70 hover:border-charcoal/40 hover:opacity-100'
+                  }`}
+                >
+                  <img src={getImageUrl(image)} alt={`${product.name} ${index + 1}`} className="h-full w-full object-contain" loading="lazy" />
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {lightboxOpen && images.length > 0 && (

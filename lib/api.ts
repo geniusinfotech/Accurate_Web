@@ -67,10 +67,16 @@ export function getUploadUrl(path?: string, folder?: string): string {
 export async function getServerApiClientInstance() {
   return {
     get: async (endpoint: string) => {
-      const res = await fetch(resolveEndpoint(endpoint), {
+      // Server-only: API_INTERNAL_URL (e.g. http://localhost:9010) skips the public hostname, which this
+      // host can't always reach itself. The timeout keeps a dead API from stalling page renders.
+      const url = process.env.API_INTERNAL_URL
+        ? resolveEndpoint(endpoint).replace(SERVER_URL, process.env.API_INTERNAL_URL.replace(/\/+$/, ''))
+        : resolveEndpoint(endpoint);
+      const res = await fetch(url, {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        cache: 'no-store',
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(1500),
       });
       if (!res.ok) throw new Error(`GET ${endpoint} failed: ${res.status}`);
       return unwrap(await res.json());
