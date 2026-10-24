@@ -1,4 +1,3 @@
-import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 import { DialogProvider } from "@/components/admin/ConfirmDialog";
@@ -44,7 +43,6 @@ export default function RootLayout({
             <ToastProvider>{children}</ToastProvider>
           </DialogProvider>
         </AuthProvider>
-        {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
   );

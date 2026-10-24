@@ -276,7 +276,7 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
           <Link
             href="/"
             onClick={closeMenu}
-            aria-label="Accurate Liqued home"
+            aria-label="Accurate Liquid home"
             className="group flex shrink-0 items-center transition-transform duration-300 hover:scale-[1.02]"
           >
             <Image
@@ -284,7 +284,7 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
               width={160}
               height={160}
               priority
-              alt="Accurate Liqued"
+              alt="Accurate Liquid"
               className="h-[58px] w-auto object-contain sm:h-[62px]"
             />
           </Link>
@@ -432,7 +432,7 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
             <Link
               href="/"
               onClick={closeMenu}
-              aria-label="Accurate Liqued home"
+              aria-label="Accurate Liquid home"
               className="flex items-center"
             >
               <Image
@@ -440,7 +440,7 @@ export function Navbar({ onCart, count = 0 }: NavbarProps) {
                 width={150}
                 height={150}
                 priority
-                alt="Accurate Liqued"
+                alt="Accurate Liquid"
                 className="h-[58px] w-auto object-contain"
               />
             </Link>
