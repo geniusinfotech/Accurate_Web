@@ -1,6 +1,7 @@
 import { cache, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { ProductDetail } from '@/components/product';
+import { ProductSkeleton } from '@/components/product/ProductSkeleton';
 import { getImageUrl, getServerApiClientInstance } from '@/lib/api';
 import { pageMetadata } from '@/lib/seo';
 
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <Suspense fallback={<main className="mx-auto max-w-[1240px] px-8 py-10"><div className="h-[460px] animate-pulse rounded-3xl bg-cream-dark" /></main>}>
+    <Suspense fallback={<ProductSkeleton />}>
       <ProductDetail id={id} />
     </Suspense>
   );

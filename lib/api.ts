@@ -76,7 +76,7 @@ export async function getServerApiClientInstance() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         next: { revalidate: 60 },
-        signal: AbortSignal.timeout(1500),
+        signal: AbortSignal.timeout(1000),
       });
       if (!res.ok) throw new Error(`GET ${endpoint} failed: ${res.status}`);
       return unwrap(await res.json());
