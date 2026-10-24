@@ -12,6 +12,7 @@ import { imagesFor, mapApiProduct, type StoreProduct, type StoreVariant } from '
 import { ProductGallery } from './ProductGallery';
 import { ProductInfo } from './ProductInfo';
 import { ProductTabs } from './ProductTabs';
+import { ProductSkeleton } from './ProductSkeleton';
 
 function ProductJsonLd({ product }: { product: StoreProduct }) {
   const json = {
@@ -114,24 +115,7 @@ export function ProductDetail({ id: propId }: { id?: string }) {
     } catch {}
   }
 
-  if (loading) {
-    return (
-      <PageFrame>
-        <main className="product-detail-page mx-auto max-w-[1240px] px-8 py-10">
-          <div className="grid gap-10 lg:grid-cols-2">
-            <div className="aspect-square animate-pulse rounded-2xl bg-cream-dark lg:aspect-auto lg:h-[520px]" />
-            <div className="space-y-4">
-              <div className="h-4 w-1/3 animate-pulse rounded bg-cream-dark" />
-              <div className="h-10 w-3/4 animate-pulse rounded bg-cream-dark" />
-              <div className="h-8 w-1/2 animate-pulse rounded bg-cream-dark" />
-              <div className="h-24 animate-pulse rounded-2xl bg-cream-dark" />
-              <div className="h-12 animate-pulse rounded-full bg-cream-dark" />
-            </div>
-          </div>
-        </main>
-      </PageFrame>
-    );
-  }
+  if (loading) return <ProductSkeleton />;
 
   if (!product) return notFound();
 
